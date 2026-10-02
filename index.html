@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kirimunge Senior School Management System">
+  <title>Kirimunge Senior School | Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- LOGIN PAGE -->
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+  <div class="school-logo">
+    <div class="logo-circle">KS</div>
+  </div>
+  <h1>Kirimunge Senior School</h1>
+  <p class="subtitle">School Management Portal</p>
+  <form id="loginForm">
+    <label for="userRole">Login as</label>
+    <select id="userRole" required>
+      <option value="">Select your role</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+      <option value="parent">Parent</option>
+      <option value="admin">Administrator</option>
+    </select>
+    <label for="username">Username</label>
+    <input
+      type="text"
+      id="username"
+      placeholder="Enter your username"
+      required
+    >
+    <label for="password">Password</label>
+    <input
+      type="password"
+      id="password"
+      placeholder="Enter your password"
+      required
+    >
+    <button type="submit" class="login-button">
+      Sign In
+    </button>
+  </form>
+  <p class="login-note">
+    Kirimunge Senior School Management System
+  </p>
+</div>
+  </section>
+  <!-- APPLICATION -->
+  <section id="appPage" class="app-page hidden">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">KS</div>
+    <div>
+      <strong>Kirimunge</strong>
+      <span>Senior School</span>
+    </div>
+  </div>
+  <nav class="navigation">
+    <button class="nav-item active" data-page="dashboard">
+      <span>📊</span>
+      Dashboard
+    </button>
+    <button class="nav-item" data-page="students">
+      <span>👨‍🎓</span>
+      Students
+    </button>
+    <button class="nav-item" data-page="teachers">
+      <span>👩‍🏫</span>
+      Teachers
+    </button>
+    <button class="nav-item" data-page="classes">
+      <span>📚</span>
+      Classes
+    </button>
+    <button class="nav-item" data-page="attendance">
+      <span>✅</span>
+      Attendance
+    </button>
+    <button class="nav-item" data-page="results">
+      <span>📈</span>
+      Results
+    </button>
+    <button class="nav-item" data-page="assignments">
+      <span>📝</span>
+      Assignments
+    </button>
+    <button class="nav-item" data-page="announcements">
+      <span>📢</span>
+      Announcements
+    </button>
+  </nav>
+  <button id="logoutButton" class="logout-button">
+    🚪 Logout
+  </button>
+</aside>
+<!-- MAIN CONTENT -->
+<main class="main-content">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div>
+      <h2 id="pageTitle">Dashboard</h2>
+      <p id="welcomeMessage">Welcome to Kirimunge Senior School.</p>
+    </div>
+    <div class="profile">
+      <div class="profile-avatar" id="profileAvatar">A</div>
+      <div>
+        <strong id="profileName">Administrator</strong>
+        <span id="profileRole">Administrator</span>
+      </div>
+    </div>
+  </header>
+  <!-- DASHBOARD -->
+  <section id="dashboardPage" class="page-section">
+    <div class="welcome-banner">
+      <div>
+        <span class="eyebrow">KIRIMUNGE SENIOR SCHOOL</span>
+        <h1>Welcome back 👋</h1>
+        <p>
+          Manage school activities from one centralized platform.
+        </p>
+      </div>
+      <div class="banner-icon">
+        🏫
+      </div>
+    </div>
+    <!-- STATISTICS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👨‍🎓</div>
+        <div>
+          <span>Total Students</span>
+          <strong>1,248</strong>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👩‍🏫</div>
+        <div>
+          <span>Total Teachers</span>
+          <strong>86</strong>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div>
+          <span>Total Classes</span>
+          <strong>32</strong>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div>
+          <span>Attendance</span>
+          <strong>94%</strong>
+        </div>
+      </div>
+    </div>
+    <!-- DASHBOARD CONTENT -->
+    <div class="dashboard-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Recent Announcements</h3>
+          <button class="text-button">View all</button>
+        </div>
+        <div class="announcement">
+          <div class="announcement-icon">📢</div>
+          <div>
+            <strong>Welcome to the new school portal</strong>
+            <p>School administration has launched the new digital portal.</p>
+            <small>Today</small>
+          </div>
+        </div>
+        <div class="announcement">
+          <div class="announcement-icon">📅</div>
+          <div>
+            <strong>Academic calendar</strong>
+            <p>The new academic calendar is now available.</p>
+            <small>Yesterday</small>
+          </div>
+        </div>
+        <div class="announcement">
+          <div class="announcement-icon">🏆</div>
+          <div>
+            <strong>School activities</strong>
+            <p>Students are reminded to participate in upcoming activities.</p>
+            <small>2 days ago</small>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div class="quick-actions">
+          <button class="quick-action">
+            <span>➕</span>
+            <div>
+              <strong>Add Student</strong>
+              <small>Register a new student</small>
+            </div>
+          </button>
+          <button class="quick-action">
+            <span>📝</span>
+            <div>
+              <strong>Enter Results</strong>
+              <small>Update academic results</small>
+            </div>
+          </button>
+          <button class="quick-action">
+            <span>📢</span>
+            <div>
+              <strong>Announcement</strong>
+              <small>Create school notice</small>
+            </div>
+          </button>
+          <button class="quick-action">
+            <span>✅</span>
+            <div>
+              <strong>Attendance</strong>
+              <small>Record attendance</small>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- GENERIC CONTENT AREA -->
+  <section id="contentPage" class="page-section hidden">
+    <div class="content-header">
+      <div>
+        <h1 id="contentTitle">Students</h1>
+        <p id="contentDescription">
+          Manage school information.
+        </p>
+      </div>
+      <button class="primary-button" id="actionButton">
+        + Add New
+      </button>
+    </div>
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon">🏫</div>
+        <h2 id="emptyTitle">
+          Students Management
+        </h2>
+        <p id="emptyDescription">
+          This section is ready for the next stage of development.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+  </section>
+  <script src="app.js"></script>
+</body>
+</html>
