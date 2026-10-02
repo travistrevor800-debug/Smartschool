@@ -16,16 +16,11 @@ const profileRole = document.getElementById("profileRole");
 const profileAvatar = document.getElementById("profileAvatar");
 const dashboardPage = document.getElementById("dashboardPage");
 const contentPage = document.getElementById("contentPage");
-const contentTitle = document.getElementById("contentTitle");
-const contentDescription = document.getElementById("contentDescription");
-const emptyTitle = document.getElementById("emptyTitle");
-const emptyDescription = document.getElementById("emptyDescription");
-const actionButton = document.getElementById("actionButton");
 const navigationItems = document.querySelectorAll(".nav-item");
 const quickActions = document.querySelectorAll(".quick-action");
 const viewAllButton = document.querySelector(".text-button");
 /* =========================================================
-   SCHOOL DATA
+   DEMO SCHOOL DATA
    ========================================================= */
 let students = [
   {
@@ -66,6 +61,44 @@ let students = [
     gender: "Male",
     className: "Form 4B",
     parent: "James Kariuki",
+    status: "Active"
+  }
+];
+let teachers = [
+  {
+    id: "T001",
+    name: "Peter Kamau",
+    gender: "Male",
+    subject: "Mathematics",
+    department: "Sciences",
+    phone: "0712 345 678",
+    status: "Active"
+  },
+  {
+    id: "T002",
+    name: "Mary Wanjiku",
+    gender: "Female",
+    subject: "English",
+    department: "Languages",
+    phone: "0723 456 789",
+    status: "Active"
+  },
+  {
+    id: "T003",
+    name: "James Kariuki",
+    gender: "Male",
+    subject: "Physics",
+    department: "Sciences",
+    phone: "0734 567 890",
+    status: "Active"
+  },
+  {
+    id: "T004",
+    name: "Jane Njeri",
+    gender: "Female",
+    subject: "History",
+    department: "Humanities",
+    phone: "0745 678 901",
     status: "Active"
   }
 ];
@@ -173,26 +206,23 @@ function showPage(page) {
       item.classList.add("active");
     }
   });
-  /* Dashboard */
   if (page === "dashboard") {
     dashboardPage.classList.remove("hidden");
     contentPage.classList.add("hidden");
     pageTitle.textContent = "Dashboard";
     return;
   }
-  /* Other pages */
   dashboardPage.classList.add("hidden");
   contentPage.classList.remove("hidden");
   pageTitle.textContent = data.title;
-  contentTitle.textContent = data.title;
-  contentDescription.textContent =
-    data.description;
-  /* Students */
   if (page === "students") {
     renderStudentsPage();
     return;
   }
-  /* Other modules */
+  if (page === "teachers") {
+    renderTeachersPage();
+    return;
+  }
   renderComingSoonPage(page);
 }
 /* =========================================================
@@ -359,7 +389,7 @@ function renderStudentTable(searchTerm = "") {
   `;
 }
 /* =========================================================
-   ADD STUDENT FORM
+   ADD STUDENT
    ========================================================= */
 function showAddStudentForm() {
   contentPage.innerHTML = `
@@ -368,10 +398,7 @@ function showAddStudentForm() {
         <h1>Add Student</h1>
         <p>Register a new student in the school system.</p>
       </div>
-      <button
-        class="primary-button"
-        id="backToStudents"
-      >
+      <button class="primary-button" id="backToStudents">
         ← Back to Students
       </button>
     </div>
@@ -379,18 +406,11 @@ function showAddStudentForm() {
       <form id="studentForm">
         <div style="
           display:grid;
-          grid-template-columns:repeat(2, minmax(0, 1fr));
+          grid-template-columns:repeat(2,minmax(0,1fr));
           gap:18px;
         ">
           <div>
-            <label style="
-              display:block;
-              font-size:13px;
-              font-weight:600;
-              margin-bottom:7px;
-            ">
-              Admission Number
-            </label>
+            <label>Admission Number</label>
             <input
               type="text"
               id="studentAdmission"
@@ -405,14 +425,7 @@ function showAddStudentForm() {
             >
           </div>
           <div>
-            <label style="
-              display:block;
-              font-size:13px;
-              font-weight:600;
-              margin-bottom:7px;
-            ">
-              Full Name
-            </label>
+            <label>Full Name</label>
             <input
               type="text"
               id="studentName"
@@ -427,14 +440,7 @@ function showAddStudentForm() {
             >
           </div>
           <div>
-            <label style="
-              display:block;
-              font-size:13px;
-              font-weight:600;
-              margin-bottom:7px;
-            ">
-              Gender
-            </label>
+            <label>Gender</label>
             <select
               id="studentGender"
               required
@@ -446,19 +452,12 @@ function showAddStudentForm() {
               "
             >
               <option value="">Select gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
+              <option>Male</option>
+              <option>Female</option>
             </select>
           </div>
           <div>
-            <label style="
-              display:block;
-              font-size:13px;
-              font-weight:600;
-              margin-bottom:7px;
-            ">
-              Class
-            </label>
+            <label>Class</label>
             <select
               id="studentClass"
               required
@@ -470,30 +469,23 @@ function showAddStudentForm() {
               "
             >
               <option value="">Select class</option>
-              <option value="Form 1A">Form 1A</option>
-              <option value="Form 1B">Form 1B</option>
-              <option value="Form 1C">Form 1C</option>
-              <option value="Form 2A">Form 2A</option>
-              <option value="Form 2B">Form 2B</option>
-              <option value="Form 3A">Form 3A</option>
-              <option value="Form 3B">Form 3B</option>
-              <option value="Form 4A">Form 4A</option>
-              <option value="Form 4B">Form 4B</option>
+              <option>Form 1A</option>
+              <option>Form 1B</option>
+              <option>Form 1C</option>
+              <option>Form 2A</option>
+              <option>Form 2B</option>
+              <option>Form 3A</option>
+              <option>Form 3B</option>
+              <option>Form 4A</option>
+              <option>Form 4B</option>
             </select>
           </div>
           <div style="grid-column:1/-1;">
-            <label style="
-              display:block;
-              font-size:13px;
-              font-weight:600;
-              margin-bottom:7px;
-            ">
-              Parent / Guardian Name
-            </label>
+            <label>Parent / Guardian Name</label>
             <input
               type="text"
               id="studentParent"
-              placeholder="Enter parent or guardian name"
+              placeholder="Enter parent or guardian"
               required
               style="
                 width:100%;
@@ -509,24 +501,11 @@ function showAddStudentForm() {
           justify-content:flex-end;
           gap:10px;
           margin-top:25px;
-          flex-wrap:wrap;
         ">
-          <button
-            type="button"
-            id="cancelStudent"
-            style="
-              padding:11px 18px;
-              border:1px solid #e5e7eb;
-              background:white;
-              border-radius:9px;
-            "
-          >
+          <button type="button" id="cancelStudent">
             Cancel
           </button>
-          <button
-            type="submit"
-            class="primary-button"
-          >
+          <button type="submit" class="primary-button">
             Save Student
           </button>
         </div>
@@ -560,14 +539,13 @@ function showAddStudentForm() {
           document.getElementById("studentParent").value.trim(),
         status: "Active"
       };
-      /* Prevent duplicate admission numbers */
       const duplicate = students.some(function (student) {
         return student.admission.toLowerCase() ===
           newStudent.admission.toLowerCase();
       });
       if (duplicate) {
         alert(
-          "That admission number already exists. Please use another one."
+          "That admission number already exists."
         );
         return;
       }
@@ -579,6 +557,440 @@ function showAddStudentForm() {
     });
 }
 /* =========================================================
+   TEACHERS PAGE
+   ========================================================= */
+function renderTeachersPage() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Teachers</h1>
+        <p>
+          Manage teachers and teaching information.
+        </p>
+      </div>
+      <button
+        class="primary-button"
+        id="addTeacherButton"
+      >
+        + Add Teacher
+      </button>
+    </div>
+    <div class="panel">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+      ">
+        <div>
+          <h3>Teacher Directory</h3>
+          <p style="
+            color:#6b7280;
+            font-size:13px;
+            margin-top:4px;
+          ">
+            ${teachers.length} registered teachers
+          </p>
+        </div>
+        <input
+          type="search"
+          id="teacherSearch"
+          placeholder="Search teachers..."
+          style="
+            width:260px;
+            max-width:100%;
+            padding:11px 13px;
+            border:1px solid #e5e7eb;
+            border-radius:9px;
+            outline:none;
+          "
+        >
+      </div>
+      <div id="teacherTableContainer"></div>
+    </div>
+  `;
+  renderTeacherTable();
+  document
+    .getElementById("teacherSearch")
+    .addEventListener("input", function () {
+      renderTeacherTable(this.value);
+    });
+  document
+    .getElementById("addTeacherButton")
+    .addEventListener("click", function () {
+      showAddTeacherForm();
+    });
+}
+/* =========================================================
+   TEACHER TABLE
+   ========================================================= */
+function renderTeacherTable(searchTerm = "") {
+  const container =
+    document.getElementById("teacherTableContainer");
+  if (!container) {
+    return;
+  }
+  const search =
+    searchTerm.toLowerCase().trim();
+  const filteredTeachers =
+    teachers.filter(function (teacher) {
+      return (
+        teacher.name.toLowerCase().includes(search) ||
+        teacher.id.toLowerCase().includes(search) ||
+        teacher.subject.toLowerCase().includes(search) ||
+        teacher.department.toLowerCase().includes(search)
+      );
+    });
+  if (filteredTeachers.length === 0) {
+    container.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:45px 20px;
+        color:#6b7280;
+      ">
+        <div style="font-size:35px;">
+          🔎
+        </div>
+        <h3 style="
+          color:#172033;
+          margin:10px 0;
+        ">
+          No teachers found
+        </h3>
+        <p>
+          Try another name, teacher ID,
+          subject or department.
+        </p>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        min-width:850px;
+      ">
+        <thead>
+          <tr style="
+            text-align:left;
+            border-bottom:1px solid #e5e7eb;
+          ">
+            <th style="padding:13px 10px;">
+              Teacher ID
+            </th>
+            <th style="padding:13px 10px;">
+              Teacher
+            </th>
+            <th style="padding:13px 10px;">
+              Gender
+            </th>
+            <th style="padding:13px 10px;">
+              Subject
+            </th>
+            <th style="padding:13px 10px;">
+              Department
+            </th>
+            <th style="padding:13px 10px;">
+              Phone
+            </th>
+            <th style="padding:13px 10px;">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredTeachers.map(function (teacher) {
+            return `
+              <tr style="
+                border-bottom:1px solid #f1f5f9;
+              ">
+                <td style="padding:15px 10px;">
+                  <strong>
+                    ${teacher.id}
+                  </strong>
+                </td>
+                <td style="padding:15px 10px;">
+                  ${teacher.name}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${teacher.gender}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${teacher.subject}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${teacher.department}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${teacher.phone}
+                </td>
+                <td style="padding:15px 10px;">
+                  <span style="
+                    background:#dcfce7;
+                    color:#166534;
+                    padding:5px 9px;
+                    border-radius:20px;
+                    font-size:12px;
+                    font-weight:600;
+                  ">
+                    ${teacher.status}
+                  </span>
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+/* =========================================================
+   ADD TEACHER FORM
+   ========================================================= */
+function showAddTeacherForm() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Add Teacher</h1>
+        <p>
+          Register a new teacher in the school system.
+        </p>
+      </div>
+      <button
+        class="primary-button"
+        id="backToTeachers"
+      >
+        ← Back to Teachers
+      </button>
+    </div>
+    <div class="panel">
+      <form id="teacherForm">
+        <div style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+        ">
+          <div>
+            <label>
+              Teacher ID
+            </label>
+            <input
+              type="text"
+              id="teacherId"
+              placeholder="e.g. T005"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="teacherName"
+              placeholder="Enter full name"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>
+              Gender
+            </label>
+            <select
+              id="teacherGender"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                Select gender
+              </option>
+              <option>
+                Male
+              </option>
+              <option>
+                Female
+              </option>
+            </select>
+          </div>
+          <div>
+            <label>
+              Subject
+            </label>
+            <input
+              type="text"
+              id="teacherSubject"
+              placeholder="e.g. Mathematics"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>
+              Department
+            </label>
+            <select
+              id="teacherDepartment"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                Select department
+              </option>
+              <option>
+                Sciences
+              </option>
+              <option>
+                Languages
+              </option>
+              <option>
+                Humanities
+              </option>
+              <option>
+                Technical
+              </option>
+              <option>
+                Mathematics
+              </option>
+              <option>
+                Administration
+              </option>
+            </select>
+          </div>
+          <div>
+            <label>
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="teacherPhone"
+              placeholder="e.g. 0712345678"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+        </div>
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:25px;
+        ">
+          <button
+            type="button"
+            id="cancelTeacher"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Teacher
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  document
+    .getElementById("backToTeachers")
+    .addEventListener("click", function () {
+      showPage("teachers");
+    });
+  document
+    .getElementById("cancelTeacher")
+    .addEventListener("click", function () {
+      showPage("teachers");
+    });
+  document
+    .getElementById("teacherForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+      const newTeacher = {
+        id:
+          document
+            .getElementById("teacherId")
+            .value
+            .trim(),
+        name:
+          document
+            .getElementById("teacherName")
+            .value
+            .trim(),
+        gender:
+          document
+            .getElementById("teacherGender")
+            .value,
+        subject:
+          document
+            .getElementById("teacherSubject")
+            .value
+            .trim(),
+        department:
+          document
+            .getElementById("teacherDepartment")
+            .value,
+        phone:
+          document
+            .getElementById("teacherPhone")
+            .value
+            .trim(),
+        status: "Active"
+      };
+      const duplicate =
+        teachers.some(function (teacher) {
+          return teacher.id.toLowerCase() ===
+            newTeacher.id.toLowerCase();
+        });
+      if (duplicate) {
+        alert(
+          "That teacher ID already exists. Please use another ID."
+        );
+        return;
+      }
+      teachers.push(newTeacher);
+      alert(
+        `${newTeacher.name} has been added successfully.`
+      );
+      showPage("teachers");
+    });
+}
+/* =========================================================
    OTHER MODULES
    ========================================================= */
 function renderComingSoonPage(page) {
@@ -586,8 +998,12 @@ function renderComingSoonPage(page) {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
-        <h1>${data.title}</h1>
-        <p>${data.description}</p>
+        <h1>
+          ${data.title}
+        </h1>
+        <p>
+          ${data.description}
+        </p>
       </div>
       <button class="primary-button">
         + Add New
@@ -627,7 +1043,7 @@ quickActions.forEach(function (button, index) {
   });
 });
 /* =========================================================
-   VIEW ALL ANNOUNCEMENTS
+   ANNOUNCEMENTS
    ========================================================= */
 if (viewAllButton) {
   viewAllButton.addEventListener("click", function () {
