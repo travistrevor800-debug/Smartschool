@@ -1,6 +1,6 @@
 /* =========================================================
    KIRIMUNGE SENIOR SCHOOL MANAGEMENT SYSTEM
-   Frontend Application
+   Classes & Subjects Module
    ========================================================= */
 const loginPage = document.getElementById("loginPage");
 const appPage = document.getElementById("appPage");
@@ -20,7 +20,7 @@ const navigationItems = document.querySelectorAll(".nav-item");
 const quickActions = document.querySelectorAll(".quick-action");
 const viewAllButton = document.querySelector(".text-button");
 /* =========================================================
-   DEMO SCHOOL DATA
+   STUDENTS
    ========================================================= */
 let students = [
   {
@@ -64,6 +64,9 @@ let students = [
     status: "Active"
   }
 ];
+/* =========================================================
+   TEACHERS
+   ========================================================= */
 let teachers = [
   {
     id: "T001",
@@ -100,6 +103,104 @@ let teachers = [
     department: "Humanities",
     phone: "0745 678 901",
     status: "Active"
+  }
+];
+/* =========================================================
+   SUBJECTS
+   ========================================================= */
+const subjects = [
+  "Mathematics",
+  "English",
+  "Kiswahili",
+  "Biology",
+  "Chemistry",
+  "Physics",
+  "History",
+  "Geography",
+  "Computer Studies",
+  "Business Studies",
+  "Agriculture",
+  "CRE",
+  "Art & Design"
+];
+/* =========================================================
+   CLASSES
+   ========================================================= */
+let classes = [
+  {
+    id: "C001",
+    name: "Form 1A",
+    stream: "A",
+    teacher: "Jane Njeri",
+    capacity: 50,
+    subjects: [
+      "Mathematics",
+      "English",
+      "Kiswahili",
+      "Biology",
+      "History",
+      "Geography"
+    ]
+  },
+  {
+    id: "C002",
+    name: "Form 1B",
+    stream: "B",
+    teacher: "Peter Kamau",
+    capacity: 50,
+    subjects: [
+      "Mathematics",
+      "English",
+      "Kiswahili",
+      "Chemistry",
+      "History",
+      "Geography"
+    ]
+  },
+  {
+    id: "C003",
+    name: "Form 2A",
+    stream: "A",
+    teacher: "Mary Wanjiku",
+    capacity: 50,
+    subjects: [
+      "Mathematics",
+      "English",
+      "Kiswahili",
+      "Biology",
+      "Physics",
+      "History"
+    ]
+  },
+  {
+    id: "C004",
+    name: "Form 3B",
+    stream: "B",
+    teacher: "James Kariuki",
+    capacity: 50,
+    subjects: [
+      "Mathematics",
+      "English",
+      "Kiswahili",
+      "Chemistry",
+      "Physics",
+      "Geography"
+    ]
+  },
+  {
+    id: "C005",
+    name: "Form 4A",
+    stream: "A",
+    teacher: "Peter Kamau",
+    capacity: 50,
+    subjects: [
+      "Mathematics",
+      "English",
+      "Kiswahili",
+      "Biology",
+      "Chemistry",
+      "Physics"
+    ]
   }
 ];
 /* =========================================================
@@ -162,20 +263,21 @@ loginForm.addEventListener("submit", function (event) {
   }
   if (!username) {
     alert("Please enter your username.");
-    usernameInput.focus();
     return;
   }
   if (!password) {
     alert("Please enter your password.");
-    passwordInput.focus();
     return;
   }
-  const selectedRole = roleNames[role] || "User";
+  const selectedRole =
+    roleNames[role] || "User";
   const displayName =
     username.charAt(0).toUpperCase() +
     username.slice(1);
-  profileName.textContent = displayName;
-  profileRole.textContent = selectedRole;
+  profileName.textContent =
+    displayName;
+  profileRole.textContent =
+    selectedRole;
   profileAvatar.textContent =
     displayName.charAt(0).toUpperCase();
   welcomeMessage.textContent =
@@ -209,18 +311,24 @@ function showPage(page) {
   if (page === "dashboard") {
     dashboardPage.classList.remove("hidden");
     contentPage.classList.add("hidden");
-    pageTitle.textContent = "Dashboard";
+    pageTitle.textContent =
+      "Dashboard";
     return;
   }
   dashboardPage.classList.add("hidden");
   contentPage.classList.remove("hidden");
-  pageTitle.textContent = data.title;
+  pageTitle.textContent =
+    data.title;
   if (page === "students") {
     renderStudentsPage();
     return;
   }
   if (page === "teachers") {
     renderTeachersPage();
+    return;
+  }
+  if (page === "classes") {
+    renderClassesPage();
     return;
   }
   renderComingSoonPage(page);
@@ -296,15 +404,17 @@ function renderStudentTable(searchTerm = "") {
   if (!container) {
     return;
   }
-  const search = searchTerm.toLowerCase().trim();
-  const filteredStudents = students.filter(function (student) {
-    return (
-      student.name.toLowerCase().includes(search) ||
-      student.admission.toLowerCase().includes(search) ||
-      student.className.toLowerCase().includes(search) ||
-      student.parent.toLowerCase().includes(search)
-    );
-  });
+  const search =
+    searchTerm.toLowerCase().trim();
+  const filteredStudents =
+    students.filter(function (student) {
+      return (
+        student.name.toLowerCase().includes(search) ||
+        student.admission.toLowerCase().includes(search) ||
+        student.className.toLowerCase().includes(search) ||
+        student.parent.toLowerCase().includes(search)
+      );
+    });
   if (filteredStudents.length === 0) {
     container.innerHTML = `
       <div style="
@@ -312,7 +422,9 @@ function renderStudentTable(searchTerm = "") {
         padding:45px 20px;
         color:#6b7280;
       ">
-        <div style="font-size:35px;">🔎</div>
+        <div style="font-size:35px;">
+          🔎
+        </div>
         <h3 style="
           color:#172033;
           margin:10px 0;
@@ -320,8 +432,8 @@ function renderStudentTable(searchTerm = "") {
           No students found
         </h3>
         <p>
-          Try searching using another name, admission number
-          or class.
+          Try searching using another name,
+          admission number or class.
         </p>
       </div>
     `;
@@ -339,12 +451,24 @@ function renderStudentTable(searchTerm = "") {
             text-align:left;
             border-bottom:1px solid #e5e7eb;
           ">
-            <th style="padding:13px 10px;">Admission No.</th>
-            <th style="padding:13px 10px;">Student</th>
-            <th style="padding:13px 10px;">Gender</th>
-            <th style="padding:13px 10px;">Class</th>
-            <th style="padding:13px 10px;">Parent/Guardian</th>
-            <th style="padding:13px 10px;">Status</th>
+            <th style="padding:13px 10px;">
+              Admission No.
+            </th>
+            <th style="padding:13px 10px;">
+              Student
+            </th>
+            <th style="padding:13px 10px;">
+              Gender
+            </th>
+            <th style="padding:13px 10px;">
+              Class
+            </th>
+            <th style="padding:13px 10px;">
+              Parent/Guardian
+            </th>
+            <th style="padding:13px 10px;">
+              Status
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -354,7 +478,9 @@ function renderStudentTable(searchTerm = "") {
                 border-bottom:1px solid #f1f5f9;
               ">
                 <td style="padding:15px 10px;">
-                  <strong>${student.admission}</strong>
+                  <strong>
+                    ${student.admission}
+                  </strong>
                 </td>
                 <td style="padding:15px 10px;">
                   ${student.name}
@@ -398,7 +524,10 @@ function showAddStudentForm() {
         <h1>Add Student</h1>
         <p>Register a new student in the school system.</p>
       </div>
-      <button class="primary-button" id="backToStudents">
+      <button
+        class="primary-button"
+        id="backToStudents"
+      >
         ← Back to Students
       </button>
     </div>
@@ -451,7 +580,9 @@ function showAddStudentForm() {
                 border-radius:9px;
               "
             >
-              <option value="">Select gender</option>
+              <option value="">
+                Select gender
+              </option>
               <option>Male</option>
               <option>Female</option>
             </select>
@@ -468,16 +599,12 @@ function showAddStudentForm() {
                 border-radius:9px;
               "
             >
-              <option value="">Select class</option>
-              <option>Form 1A</option>
-              <option>Form 1B</option>
-              <option>Form 1C</option>
-              <option>Form 2A</option>
-              <option>Form 2B</option>
-              <option>Form 3A</option>
-              <option>Form 3B</option>
-              <option>Form 4A</option>
-              <option>Form 4B</option>
+              <option value="">
+                Select class
+              </option>
+              ${classes.map(c =>
+                `<option>${c.name}</option>`
+              ).join("")}
             </select>
           </div>
           <div style="grid-column:1/-1;">
@@ -502,10 +629,16 @@ function showAddStudentForm() {
           gap:10px;
           margin-top:25px;
         ">
-          <button type="button" id="cancelStudent">
+          <button
+            type="button"
+            id="cancelStudent"
+          >
             Cancel
           </button>
-          <button type="submit" class="primary-button">
+          <button
+            type="submit"
+            class="primary-button"
+          >
             Save Student
           </button>
         </div>
@@ -528,21 +661,32 @@ function showAddStudentForm() {
       event.preventDefault();
       const newStudent = {
         admission:
-          document.getElementById("studentAdmission").value.trim(),
+          document
+            .getElementById("studentAdmission")
+            .value.trim(),
         name:
-          document.getElementById("studentName").value.trim(),
+          document
+            .getElementById("studentName")
+            .value.trim(),
         gender:
-          document.getElementById("studentGender").value,
+          document
+            .getElementById("studentGender")
+            .value,
         className:
-          document.getElementById("studentClass").value,
+          document
+            .getElementById("studentClass")
+            .value,
         parent:
-          document.getElementById("studentParent").value.trim(),
+          document
+            .getElementById("studentParent")
+            .value.trim(),
         status: "Active"
       };
-      const duplicate = students.some(function (student) {
-        return student.admission.toLowerCase() ===
-          newStudent.admission.toLowerCase();
-      });
+      const duplicate =
+        students.some(function (student) {
+          return student.admission.toLowerCase() ===
+            newStudent.admission.toLowerCase();
+        });
       if (duplicate) {
         alert(
           "That admission number already exists."
@@ -709,9 +853,7 @@ function renderTeacherTable(searchTerm = "") {
                 border-bottom:1px solid #f1f5f9;
               ">
                 <td style="padding:15px 10px;">
-                  <strong>
-                    ${teacher.id}
-                  </strong>
+                  <strong>${teacher.id}</strong>
                 </td>
                 <td style="padding:15px 10px;">
                   ${teacher.name}
@@ -749,7 +891,7 @@ function renderTeacherTable(searchTerm = "") {
   `;
 }
 /* =========================================================
-   ADD TEACHER FORM
+   ADD TEACHER
    ========================================================= */
 function showAddTeacherForm() {
   contentPage.innerHTML = `
@@ -775,9 +917,7 @@ function showAddTeacherForm() {
           gap:18px;
         ">
           <div>
-            <label>
-              Teacher ID
-            </label>
+            <label>Teacher ID</label>
             <input
               type="text"
               id="teacherId"
@@ -792,9 +932,7 @@ function showAddTeacherForm() {
             >
           </div>
           <div>
-            <label>
-              Full Name
-            </label>
+            <label>Full Name</label>
             <input
               type="text"
               id="teacherName"
@@ -809,9 +947,7 @@ function showAddTeacherForm() {
             >
           </div>
           <div>
-            <label>
-              Gender
-            </label>
+            <label>Gender</label>
             <select
               id="teacherGender"
               required
@@ -825,22 +961,14 @@ function showAddTeacherForm() {
               <option value="">
                 Select gender
               </option>
-              <option>
-                Male
-              </option>
-              <option>
-                Female
-              </option>
+              <option>Male</option>
+              <option>Female</option>
             </select>
           </div>
           <div>
-            <label>
-              Subject
-            </label>
-            <input
-              type="text"
+            <label>Subject</label>
+            <select
               id="teacherSubject"
-              placeholder="e.g. Mathematics"
               required
               style="
                 width:100%;
@@ -849,11 +977,16 @@ function showAddTeacherForm() {
                 border-radius:9px;
               "
             >
+              <option value="">
+                Select subject
+              </option>
+              ${subjects.map(function(subject) {
+                return `<option>${subject}</option>`;
+              }).join("")}
+            </select>
           </div>
           <div>
-            <label>
-              Department
-            </label>
+            <label>Department</label>
             <select
               id="teacherDepartment"
               required
@@ -867,30 +1000,16 @@ function showAddTeacherForm() {
               <option value="">
                 Select department
               </option>
-              <option>
-                Sciences
-              </option>
-              <option>
-                Languages
-              </option>
-              <option>
-                Humanities
-              </option>
-              <option>
-                Technical
-              </option>
-              <option>
-                Mathematics
-              </option>
-              <option>
-                Administration
-              </option>
+              <option>Sciences</option>
+              <option>Languages</option>
+              <option>Humanities</option>
+              <option>Technical</option>
+              <option>Mathematics</option>
+              <option>Administration</option>
             </select>
           </div>
           <div>
-            <label>
-              Phone Number
-            </label>
+            <label>Phone Number</label>
             <input
               type="tel"
               id="teacherPhone"
@@ -945,13 +1064,11 @@ function showAddTeacherForm() {
         id:
           document
             .getElementById("teacherId")
-            .value
-            .trim(),
+            .value.trim(),
         name:
           document
             .getElementById("teacherName")
-            .value
-            .trim(),
+            .value.trim(),
         gender:
           document
             .getElementById("teacherGender")
@@ -959,8 +1076,7 @@ function showAddTeacherForm() {
         subject:
           document
             .getElementById("teacherSubject")
-            .value
-            .trim(),
+            .value,
         department:
           document
             .getElementById("teacherDepartment")
@@ -968,8 +1084,7 @@ function showAddTeacherForm() {
         phone:
           document
             .getElementById("teacherPhone")
-            .value
-            .trim(),
+            .value.trim(),
         status: "Active"
       };
       const duplicate =
@@ -979,7 +1094,7 @@ function showAddTeacherForm() {
         });
       if (duplicate) {
         alert(
-          "That teacher ID already exists. Please use another ID."
+          "That teacher ID already exists."
         );
         return;
       }
@@ -988,6 +1103,468 @@ function showAddTeacherForm() {
         `${newTeacher.name} has been added successfully.`
       );
       showPage("teachers");
+    });
+}
+/* =========================================================
+   CLASSES PAGE
+   ========================================================= */
+function renderClassesPage() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Classes & Subjects</h1>
+        <p>
+          Manage classes, streams, class teachers and subjects.
+        </p>
+      </div>
+      <button
+        class="primary-button"
+        id="addClassButton"
+      >
+        + Add Class
+      </button>
+    </div>
+    <div class="panel">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+      ">
+        <div>
+          <h3>Class Directory</h3>
+          <p style="
+            color:#6b7280;
+            font-size:13px;
+            margin-top:4px;
+          ">
+            ${classes.length} classes configured
+          </p>
+        </div>
+        <input
+          type="search"
+          id="classSearch"
+          placeholder="Search classes..."
+          style="
+            width:260px;
+            max-width:100%;
+            padding:11px 13px;
+            border:1px solid #e5e7eb;
+            border-radius:9px;
+            outline:none;
+          "
+        >
+      </div>
+      <div id="classTableContainer"></div>
+    </div>
+  `;
+  renderClassTable();
+  document
+    .getElementById("classSearch")
+    .addEventListener("input", function () {
+      renderClassTable(this.value);
+    });
+  document
+    .getElementById("addClassButton")
+    .addEventListener("click", function () {
+      showAddClassForm();
+    });
+}
+/* =========================================================
+   CLASS TABLE
+   ========================================================= */
+function renderClassTable(searchTerm = "") {
+  const container =
+    document.getElementById("classTableContainer");
+  if (!container) {
+    return;
+  }
+  const search =
+    searchTerm.toLowerCase().trim();
+  const filteredClasses =
+    classes.filter(function (item) {
+      return (
+        item.name.toLowerCase().includes(search) ||
+        item.stream.toLowerCase().includes(search) ||
+        item.teacher.toLowerCase().includes(search)
+      );
+    });
+  if (filteredClasses.length === 0) {
+    container.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:45px 20px;
+        color:#6b7280;
+      ">
+        <div style="font-size:35px;">
+          🔎
+        </div>
+        <h3 style="
+          color:#172033;
+          margin:10px 0;
+        ">
+          No classes found
+        </h3>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        min-width:850px;
+      ">
+        <thead>
+          <tr style="
+            text-align:left;
+            border-bottom:1px solid #e5e7eb;
+          ">
+            <th style="padding:13px 10px;">
+              Class ID
+            </th>
+            <th style="padding:13px 10px;">
+              Class
+            </th>
+            <th style="padding:13px 10px;">
+              Stream
+            </th>
+            <th style="padding:13px 10px;">
+              Class Teacher
+            </th>
+            <th style="padding:13px 10px;">
+              Students
+            </th>
+            <th style="padding:13px 10px;">
+              Capacity
+            </th>
+            <th style="padding:13px 10px;">
+              Subjects
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredClasses.map(function (item) {
+            const studentCount =
+              students.filter(function(student) {
+                return student.className === item.name;
+              }).length;
+            return `
+              <tr style="
+                border-bottom:1px solid #f1f5f9;
+              ">
+                <td style="padding:15px 10px;">
+                  <strong>
+                    ${item.id}
+                  </strong>
+                </td>
+                <td style="padding:15px 10px;">
+                  <strong>
+                    ${item.name}
+                  </strong>
+                </td>
+                <td style="padding:15px 10px;">
+                  ${item.stream}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${item.teacher}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${studentCount}
+                </td>
+                <td style="padding:15px 10px;">
+                  ${item.capacity}
+                </td>
+                <td style="padding:15px 10px;">
+                  <span style="
+                    background:#eff6ff;
+                    color:#1d4ed8;
+                    padding:5px 9px;
+                    border-radius:20px;
+                    font-size:12px;
+                    font-weight:600;
+                  ">
+                    ${item.subjects.length} subjects
+                  </span>
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+/* =========================================================
+   ADD CLASS FORM
+   ========================================================= */
+function showAddClassForm() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Add Class</h1>
+        <p>
+          Create a new school class and assign its teacher.
+        </p>
+      </div>
+      <button
+        class="primary-button"
+        id="backToClasses"
+      >
+        ← Back to Classes
+      </button>
+    </div>
+    <div class="panel">
+      <form id="classForm">
+        <div style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+        ">
+          <div>
+            <label>Class ID</label>
+            <input
+              type="text"
+              id="classId"
+              placeholder="e.g. C006"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>Class Name</label>
+            <select
+              id="className"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                Select class
+              </option>
+              <option>Form 1A</option>
+              <option>Form 1B</option>
+              <option>Form 1C</option>
+              <option>Form 2A</option>
+              <option>Form 2B</option>
+              <option>Form 2C</option>
+              <option>Form 3A</option>
+              <option>Form 3B</option>
+              <option>Form 3C</option>
+              <option>Form 4A</option>
+              <option>Form 4B</option>
+              <option>Form 4C</option>
+            </select>
+          </div>
+          <div>
+            <label>Stream</label>
+            <select
+              id="classStream"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                Select stream
+              </option>
+              <option>A</option>
+              <option>B</option>
+              <option>C</option>
+              <option>D</option>
+            </select>
+          </div>
+          <div>
+            <label>Class Teacher</label>
+            <select
+              id="classTeacher"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                Select teacher
+              </option>
+              ${teachers.map(function(teacher) {
+                return `
+                  <option>
+                    ${teacher.name}
+                  </option>
+                `;
+              }).join("")}
+            </select>
+          </div>
+          <div>
+            <label>Class Capacity</label>
+            <input
+              type="number"
+              id="classCapacity"
+              value="50"
+              min="1"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>Subjects</label>
+            <select
+              id="classSubjects"
+              multiple
+              required
+              style="
+                width:100%;
+                min-height:140px;
+                padding:10px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              ${subjects.map(function(subject) {
+                return `
+                  <option value="${subject}">
+                    ${subject}
+                  </option>
+                `;
+              }).join("")}
+            </select>
+            <small style="
+              display:block;
+              color:#6b7280;
+              margin-top:6px;
+            ">
+              Hold Ctrl/Cmd to select multiple subjects.
+            </small>
+          </div>
+        </div>
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:25px;
+        ">
+          <button
+            type="button"
+            id="cancelClass"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Class
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  document
+    .getElementById("backToClasses")
+    .addEventListener("click", function () {
+      showPage("classes");
+    });
+  document
+    .getElementById("cancelClass")
+    .addEventListener("click", function () {
+      showPage("classes");
+    });
+  document
+    .getElementById("classForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+      const selectedSubjects =
+        Array.from(
+          document.getElementById("classSubjects").selectedOptions
+        ).map(function(option) {
+          return option.value;
+        });
+      if (selectedSubjects.length === 0) {
+        alert(
+          "Please select at least one subject."
+        );
+        return;
+      }
+      const newClass = {
+        id:
+          document
+            .getElementById("classId")
+            .value.trim(),
+        name:
+          document
+            .getElementById("className")
+            .value,
+        stream:
+          document
+            .getElementById("classStream")
+            .value,
+        teacher:
+          document
+            .getElementById("classTeacher")
+            .value,
+        capacity:
+          Number(
+            document
+              .getElementById("classCapacity")
+              .value
+          ),
+        subjects:
+          selectedSubjects
+      };
+      const duplicate =
+        classes.some(function(item) {
+          return (
+            item.id.toLowerCase() ===
+            newClass.id.toLowerCase()
+          );
+        });
+      if (duplicate) {
+        alert(
+          "That class ID already exists."
+        );
+        return;
+      }
+      const classExists =
+        classes.some(function(item) {
+          return (
+            item.name.toLowerCase() ===
+            newClass.name.toLowerCase()
+          );
+        });
+      if (classExists) {
+        alert(
+          "That class already exists."
+        );
+        return;
+      }
+      classes.push(newClass);
+      alert(
+        `${newClass.name} has been created successfully.`
+      );
+      showPage("classes");
     });
 }
 /* =========================================================
@@ -1029,8 +1606,8 @@ function renderComingSoonPage(page) {
 /* =========================================================
    QUICK ACTIONS
    ========================================================= */
-quickActions.forEach(function (button, index) {
-  button.addEventListener("click", function () {
+quickActions.forEach(function(button, index) {
+  button.addEventListener("click", function() {
     const pages = [
       "students",
       "results",
@@ -1043,17 +1620,17 @@ quickActions.forEach(function (button, index) {
   });
 });
 /* =========================================================
-   ANNOUNCEMENTS
+   ANNOUNCEMENTS BUTTON
    ========================================================= */
 if (viewAllButton) {
-  viewAllButton.addEventListener("click", function () {
+  viewAllButton.addEventListener("click", function() {
     showPage("announcements");
   });
 }
 /* =========================================================
    LOGOUT
    ========================================================= */
-logoutButton.addEventListener("click", function () {
+logoutButton.addEventListener("click", function() {
   const confirmed =
     confirm("Are you sure you want to logout?");
   if (!confirmed) {
@@ -1062,9 +1639,12 @@ logoutButton.addEventListener("click", function () {
   appPage.classList.add("hidden");
   loginPage.classList.remove("hidden");
   loginForm.reset();
-  profileName.textContent = "Administrator";
-  profileRole.textContent = "Administrator";
-  profileAvatar.textContent = "A";
+  profileName.textContent =
+    "Administrator";
+  profileRole.textContent =
+    "Administrator";
+  profileAvatar.textContent =
+    "A";
   welcomeMessage.textContent =
     "Welcome to Kirimunge Senior School.";
   showPage("dashboard");
