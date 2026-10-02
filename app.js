@@ -1,18 +1,12 @@
 /* =========================================================
    KIRIMUNGE SENIOR SCHOOL MANAGEMENT SYSTEM
-   Role-Based Access Version
-   ========================================================= */
-
-
-/* =========================================================
-   DOM ELEMENTS
+   ROLE BASED ACCESS CONTROL
    ========================================================= */
 
 const loginPage = document.getElementById("loginPage");
 const appPage = document.getElementById("appPage");
 
 const loginForm = document.getElementById("loginForm");
-
 const userRole = document.getElementById("userRole");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
@@ -45,11 +39,6 @@ let currentUser = null;
 
 /* =========================================================
    ROLE PERMISSIONS
-   =========================================================
-
-   These permissions control what each role can see.
-   Real security will be added later with authentication
-   and server-side permissions.
    ========================================================= */
 
 const rolePermissions = {
@@ -110,62 +99,52 @@ const pageInfo = {
 
   dashboard: {
     title: "Dashboard",
-    description:
-      "Welcome to Kirimunge Senior School."
+    description: "Welcome to Kirimunge Senior School."
   },
 
   students: {
     title: "Students",
-    description:
-      "Manage student records."
+    description: "Manage student records."
   },
 
   teachers: {
     title: "Teachers",
-    description:
-      "Manage teacher records."
+    description: "Manage teacher records."
   },
 
   classes: {
     title: "Classes",
-    description:
-      "View and manage school classes."
+    description: "View school classes."
   },
 
   attendance: {
     title: "Attendance",
-    description:
-      "Manage student attendance."
+    description: "Student attendance."
   },
 
   results: {
     title: "Results",
-    description:
-      "View and manage academic results."
+    description: "Academic results."
   },
 
   assignments: {
     title: "Assignments",
-    description:
-      "Manage school assignments."
+    description: "School assignments."
   },
 
   announcements: {
     title: "Announcements",
-    description:
-      "School announcements and notices."
+    description: "School announcements."
   },
 
   fees: {
     title: "Fees",
-    description:
-      "Manage student fees and payments."
+    description: "Student fees and payments."
   },
 
   notifications: {
     title: "Notifications",
-    description:
-      "School notifications and messages."
+    description: "School notifications."
   }
 
 };
@@ -176,101 +155,69 @@ const pageInfo = {
    ========================================================= */
 
 let students = [
-
   {
     admission: "KS001",
     name: "Brian Mwangi",
     className: "Form 4A",
     gender: "Male"
   },
-
   {
     admission: "KS002",
     name: "Faith Wanjiku",
     className: "Form 3B",
     gender: "Female"
   },
-
   {
     admission: "KS003",
     name: "Kevin Kamau",
     className: "Form 2A",
     gender: "Male"
   },
-
   {
     admission: "KS004",
     name: "Sharon Njeri",
     className: "Form 1A",
     gender: "Female"
   },
-
   {
     admission: "KS005",
     name: "Daniel Kariuki",
     className: "Form 4A",
     gender: "Male"
   }
-
 ];
 
 
 let teachers = [
-
   {
     id: "T001",
     name: "Peter Kamau",
     subject: "Mathematics"
   },
-
   {
     id: "T002",
     name: "Mary Wanjiku",
     subject: "English"
   },
-
   {
     id: "T003",
     name: "James Kariuki",
     subject: "Biology"
   },
-
   {
     id: "T004",
     name: "Jane Njeri",
     subject: "Chemistry"
   }
-
-];
-
-
-const subjects = [
-
-  "Mathematics",
-  "English",
-  "Kiswahili",
-  "Biology",
-  "Chemistry",
-  "Physics",
-  "History",
-  "Geography",
-  "Computer Studies",
-  "Business Studies",
-  "Agriculture",
-  "CRE",
-  "Art & Design"
-
 ];
 
 
 let classes = [
-
   "Form 1A",
   "Form 1B",
   "Form 2A",
   "Form 3B",
   "Form 4A"
-
 ];
 
 
@@ -278,7 +225,6 @@ let attendanceRecords = [];
 
 
 let results = [
-
   {
     admission: "KS001",
     student: "Brian Mwangi",
@@ -286,7 +232,6 @@ let results = [
     marks: 82,
     grade: "A"
   },
-
   {
     admission: "KS002",
     student: "Faith Wanjiku",
@@ -294,7 +239,6 @@ let results = [
     marks: 74,
     grade: "B+"
   },
-
   {
     admission: "KS003",
     student: "Kevin Kamau",
@@ -302,60 +246,42 @@ let results = [
     marks: 68,
     grade: "B"
   }
-
 ];
 
 
 let assignments = [
-
   {
     title: "Algebra Exercise",
     subject: "Mathematics",
     className: "Form 4A",
     dueDate: "2026-10-10"
   },
-
   {
     title: "Essay Writing",
     subject: "English",
     className: "Form 3B",
     dueDate: "2026-10-12"
   }
-
 ];
 
 
 let announcements = [
-
   {
     title: "Welcome Back",
-    message:
-      "Welcome to the new school term.",
-    author:
-      "School Administration",
-    date:
-      "2026-10-01"
+    message: "Welcome to the new school term.",
+    author: "School Administration",
+    date: "2026-10-01"
   },
-
   {
     title: "Examination Schedule",
-    message:
-      "The examination timetable will be released soon.",
-    author:
-      "Academic Department",
-    date:
-      "2026-10-02"
+    message: "The examination timetable will be released soon.",
+    author: "Academic Department",
+    date: "2026-10-02"
   }
-
 ];
 
 
-/* =========================================================
-   FEES DATA
-   ========================================================= */
-
 let fees = [
-
   {
     admission: "KS001",
     student: "Brian Mwangi",
@@ -363,7 +289,6 @@ let fees = [
     total: 45000,
     paid: 30000
   },
-
   {
     admission: "KS002",
     student: "Faith Wanjiku",
@@ -371,7 +296,6 @@ let fees = [
     total: 45000,
     paid: 45000
   },
-
   {
     admission: "KS003",
     student: "Kevin Kamau",
@@ -379,7 +303,6 @@ let fees = [
     total: 42000,
     paid: 25000
   },
-
   {
     admission: "KS004",
     student: "Sharon Njeri",
@@ -387,7 +310,6 @@ let fees = [
     total: 40000,
     paid: 18000
   },
-
   {
     admission: "KS005",
     student: "Daniel Kariuki",
@@ -395,12 +317,10 @@ let fees = [
     total: 45000,
     paid: 40000
   }
-
 ];
 
 
 let feePayments = [
-
   {
     id: "P001",
     admission: "KS001",
@@ -410,7 +330,6 @@ let feePayments = [
     reference: "MPESA001",
     date: "2026-10-01"
   },
-
   {
     id: "P002",
     admission: "KS002",
@@ -420,7 +339,6 @@ let feePayments = [
     reference: "BANK001",
     date: "2026-09-20"
   },
-
   {
     id: "P003",
     admission: "KS003",
@@ -430,36 +348,26 @@ let feePayments = [
     reference: "MPESA002",
     date: "2026-09-28"
   }
-
 ];
 
 
-/* =========================================================
-   NOTIFICATIONS
-   ========================================================= */
-
 let notifications = [
-
   {
     id: "N001",
     title: "Welcome to Kirimunge Senior School",
-    message:
-      "Your school management account is ready.",
+    message: "Your school management account is ready.",
     audience: "All",
     date: "2026-10-01",
     read: false
   },
-
   {
     id: "N002",
     title: "Examination Information",
-    message:
-      "Please check the examination announcements.",
+    message: "Please check the examination announcements.",
     audience: "Students",
     date: "2026-10-02",
     read: false
   }
-
 ];
 
 
@@ -468,32 +376,26 @@ let notifications = [
    ========================================================= */
 
 function money(amount) {
-
   return "KSh " +
     Number(amount || 0).toLocaleString("en-KE");
-
 }
 
 
 function escapeHTML(value) {
-
   return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-
 }
 
 
 function getFeeBalance(record) {
-
   return Math.max(
     0,
     Number(record.total) - Number(record.paid)
   );
-
 }
 
 
@@ -510,12 +412,28 @@ function getFeeStatus(record) {
   }
 
   return "Not Paid";
-
 }
 
 
 /* =========================================================
-   ROLE HELPERS
+   ROLE NAME
+   ========================================================= */
+
+function roleName(role) {
+
+  const names = {
+    student: "Student",
+    teacher: "Teacher",
+    parent: "Parent",
+    admin: "Administrator"
+  };
+
+  return names[role] || role;
+}
+
+
+/* =========================================================
+   CHECK PERMISSION
    ========================================================= */
 
 function hasPermission(page) {
@@ -524,34 +442,15 @@ function hasPermission(page) {
     return false;
   }
 
-  const permissions =
+  const allowed =
     rolePermissions[currentUser.role] || [];
 
-  return permissions.includes(page);
-
-}
-
-
-function roleName(role) {
-
-  const names = {
-
-    student: "Student",
-
-    teacher: "Teacher",
-
-    parent: "Parent",
-
-    admin: "Administrator"
-
-  };
-
-  return names[role] || role;
-
+  return allowed.includes(page);
 }
 
 
 /* =========================================================
+   IMPORTANT:
    APPLY ROLE ACCESS
    ========================================================= */
 
@@ -561,22 +460,50 @@ function applyRoleAccess() {
     return;
   }
 
-  const allowedPages =
+  const allowed =
     rolePermissions[currentUser.role] || [];
 
 
+  /* -------------------------------
+     SIDEBAR
+     ------------------------------- */
+
   navigationItems.forEach(item => {
 
-    const page =
-      item.dataset.page;
+    const page = item.dataset.page;
 
-    if (allowedPages.includes(page)) {
+    if (allowed.includes(page)) {
 
-      item.classList.remove("hidden");
+      item.style.display = "";
+
+      item.removeAttribute("aria-hidden");
 
     } else {
 
-      item.classList.add("hidden");
+      item.style.display = "none";
+
+      item.setAttribute("aria-hidden", "true");
+
+    }
+
+  });
+
+
+  /* -------------------------------
+     QUICK ACTIONS
+     ------------------------------- */
+
+  quickActions.forEach(action => {
+
+    const page = action.dataset.action;
+
+    if (allowed.includes(page)) {
+
+      action.style.display = "";
+
+    } else {
+
+      action.style.display = "none";
 
     }
 
@@ -584,25 +511,32 @@ function applyRoleAccess() {
 
 
   /*
-    Quick actions are also restricted.
+     Extra protection:
+     If a student logs in, make absolutely
+     sure restricted pages cannot be opened.
   */
 
-  quickActions.forEach(action => {
+  if (currentUser.role === "student") {
 
-    const page =
-      action.dataset.action;
+    const restricted = [
+      "students",
+      "teachers"
+    ];
 
-    if (allowedPages.includes(page)) {
+    restricted.forEach(page => {
 
-      action.classList.remove("hidden");
+      const button =
+        document.querySelector(
+          `.nav-item[data-page="${page}"]`
+        );
 
-    } else {
+      if (button) {
+        button.style.display = "none";
+      }
 
-      action.classList.add("hidden");
+    });
 
-    }
-
-  });
+  }
 
 }
 
@@ -617,9 +551,7 @@ loginForm.addEventListener(
 
     event.preventDefault();
 
-
-    const role =
-      userRole.value;
+    const role = userRole.value;
 
     const username =
       usernameInput.value.trim();
@@ -647,11 +579,8 @@ loginForm.addEventListener(
 
 
     currentUser = {
-
       username: username,
-
       role: role
-
     };
 
 
@@ -673,6 +602,10 @@ loginForm.addEventListener(
 
     appPage.classList.remove("hidden");
 
+
+    /*
+       THIS MUST RUN AFTER LOGIN
+    */
 
     applyRoleAccess();
 
@@ -700,9 +633,24 @@ logoutButton.addEventListener(
 
     loginForm.reset();
 
-    contentPage.innerHTML = "";
+    /*
+       Restore sidebar for the next login.
+    */
 
-    showPage("dashboard");
+    navigationItems.forEach(item => {
+      item.style.display = "";
+      item.removeAttribute("aria-hidden");
+    });
+
+
+    quickActions.forEach(action => {
+      action.style.display = "";
+    });
+
+
+    dashboardPage.classList.remove("hidden");
+
+    contentPage.classList.add("hidden");
 
   }
 );
@@ -732,16 +680,29 @@ navigationItems.forEach(item => {
 function showPage(page) {
 
   /*
-    Prevent unauthorized navigation.
+     HARD PERMISSION CHECK
   */
 
-  if (page !== "dashboard" && !hasPermission(page)) {
+  if (page !== "dashboard") {
 
-    alert(
-      "You do not have permission to access this section."
-    );
+    if (!currentUser) {
 
-    return;
+      alert("Please login first.");
+
+      return;
+
+    }
+
+
+    if (!hasPermission(page)) {
+
+      alert(
+        `Access denied. ${roleName(currentUser.role)} accounts cannot access ${page}.`
+      );
+
+      return;
+
+    }
 
   }
 
@@ -824,15 +785,6 @@ function showPage(page) {
       renderNotificationsPage();
       break;
 
-    default:
-
-      contentPage.innerHTML = `
-        <div class="panel">
-          <h2>${escapeHTML(info.title)}</h2>
-          <p>${escapeHTML(info.description)}</p>
-        </div>
-      `;
-
   }
 
 }
@@ -857,34 +809,26 @@ function updateDashboard() {
 
 
   if (statValues[0]) {
-
     statValues[0].textContent =
       students.length;
-
   }
 
 
   if (statValues[1]) {
-
     statValues[1].textContent =
       teachers.length;
-
   }
 
 
   if (statValues[2]) {
-
     statValues[2].textContent =
       classes.length;
-
   }
 
 
   if (statValues[3]) {
-
     statValues[3].textContent =
       money(totalOutstanding);
-
   }
 
 }
@@ -896,6 +840,15 @@ function updateDashboard() {
 
 function renderStudentsPage() {
 
+  if (!hasPermission("students")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
+
   contentPage.innerHTML = `
 
     <div class="page-header">
@@ -906,7 +859,6 @@ function renderStudentsPage() {
       </div>
 
     </div>
-
 
     <div class="panel">
 
@@ -931,21 +883,13 @@ function renderStudentsPage() {
 
               <tr>
 
-                <td>
-                  ${escapeHTML(student.admission)}
-                </td>
+                <td>${escapeHTML(student.admission)}</td>
 
-                <td>
-                  ${escapeHTML(student.name)}
-                </td>
+                <td>${escapeHTML(student.name)}</td>
 
-                <td>
-                  ${escapeHTML(student.className)}
-                </td>
+                <td>${escapeHTML(student.className)}</td>
 
-                <td>
-                  ${escapeHTML(student.gender)}
-                </td>
+                <td>${escapeHTML(student.gender)}</td>
 
               </tr>
 
@@ -958,9 +902,7 @@ function renderStudentsPage() {
       </div>
 
     </div>
-
   `;
-
 }
 
 
@@ -969,6 +911,15 @@ function renderStudentsPage() {
    ========================================================= */
 
 function renderTeachersPage() {
+
+  if (!hasPermission("teachers")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
 
   contentPage.innerHTML = `
 
@@ -980,7 +931,6 @@ function renderTeachersPage() {
       </div>
 
     </div>
-
 
     <div class="panel">
 
@@ -1004,17 +954,11 @@ function renderTeachersPage() {
 
               <tr>
 
-                <td>
-                  ${escapeHTML(teacher.id)}
-                </td>
+                <td>${escapeHTML(teacher.id)}</td>
 
-                <td>
-                  ${escapeHTML(teacher.name)}
-                </td>
+                <td>${escapeHTML(teacher.name)}</td>
 
-                <td>
-                  ${escapeHTML(teacher.subject)}
-                </td>
+                <td>${escapeHTML(teacher.subject)}</td>
 
               </tr>
 
@@ -1027,9 +971,7 @@ function renderTeachersPage() {
       </div>
 
     </div>
-
   `;
-
 }
 
 
@@ -1038,6 +980,15 @@ function renderTeachersPage() {
    ========================================================= */
 
 function renderClassesPage() {
+
+  if (!hasPermission("classes")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
 
   contentPage.innerHTML = `
 
@@ -1050,7 +1001,6 @@ function renderClassesPage() {
 
     </div>
 
-
     <div class="dashboard-grid">
 
       ${classes.map(className => `
@@ -1062,7 +1012,7 @@ function renderClassesPage() {
           </h3>
 
           <p>
-            Students enrolled:
+            Students:
             ${
               students.filter(
                 student =>
@@ -1076,9 +1026,7 @@ function renderClassesPage() {
       `).join("")}
 
     </div>
-
   `;
-
 }
 
 
@@ -1087,6 +1035,15 @@ function renderClassesPage() {
    ========================================================= */
 
 function renderAttendancePage() {
+
+  if (!hasPermission("attendance")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
 
   contentPage.innerHTML = `
 
@@ -1098,7 +1055,6 @@ function renderAttendancePage() {
       </div>
 
     </div>
-
 
     <div class="panel">
 
@@ -1131,8 +1087,9 @@ function renderAttendancePage() {
                 </td>
 
                 <td>
+
                   <select
-                    onchange="setAttendance('${escapeHTML(student.admission)}', this.value)"
+                    onchange="setAttendance('${student.admission}', this.value)"
                   >
 
                     <option value="">
@@ -1166,9 +1123,7 @@ function renderAttendancePage() {
       </div>
 
     </div>
-
   `;
-
 }
 
 
@@ -1176,9 +1131,7 @@ function setAttendance(admission, status) {
 
   if (!hasPermission("attendance")) {
 
-    alert(
-      "You do not have permission to manage attendance."
-    );
+    alert("Access denied.");
 
     return;
 
@@ -1190,41 +1143,32 @@ function setAttendance(admission, status) {
   }
 
 
-  const existing =
-    attendanceRecords.find(
-      record =>
-        record.admission === admission
+  const student =
+    students.find(
+      item =>
+        item.admission === admission
     );
 
 
-  if (existing) {
-
-    existing.status = status;
-
-  } else {
-
-    const student =
-      students.find(
-        student =>
-          student.admission === admission
-      );
-
-
-    attendanceRecords.push({
-
-      admission: admission,
-
-      student:
-        student ? student.name : "Unknown",
-
-      status: status,
-
-      date:
-        new Date().toISOString().split("T")[0]
-
-    });
-
+  if (!student) {
+    return;
   }
+
+
+  attendanceRecords.push({
+
+    admission: admission,
+
+    student: student.name,
+
+    status: status,
+
+    date:
+      new Date()
+        .toISOString()
+        .split("T")[0]
+
+  });
 
 
   alert(
@@ -1240,6 +1184,15 @@ function setAttendance(admission, status) {
 
 function renderResultsPage() {
 
+  if (!hasPermission("results")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
+
   contentPage.innerHTML = `
 
     <div class="page-header">
@@ -1250,7 +1203,6 @@ function renderResultsPage() {
       </div>
 
     </div>
-
 
     <div class="panel">
 
@@ -1276,27 +1228,15 @@ function renderResultsPage() {
 
               <tr>
 
-                <td>
-                  ${escapeHTML(result.admission)}
-                </td>
+                <td>${escapeHTML(result.admission)}</td>
 
-                <td>
-                  ${escapeHTML(result.student)}
-                </td>
+                <td>${escapeHTML(result.student)}</td>
 
-                <td>
-                  ${escapeHTML(result.subject)}
-                </td>
+                <td>${escapeHTML(result.subject)}</td>
 
-                <td>
-                  ${result.marks}
-                </td>
+                <td>${result.marks}</td>
 
-                <td>
-                  <strong>
-                    ${escapeHTML(result.grade)}
-                  </strong>
-                </td>
+                <td>${escapeHTML(result.grade)}</td>
 
               </tr>
 
@@ -1309,9 +1249,7 @@ function renderResultsPage() {
       </div>
 
     </div>
-
   `;
-
 }
 
 
@@ -1320,6 +1258,15 @@ function renderResultsPage() {
    ========================================================= */
 
 function renderAssignmentsPage() {
+
+  if (!hasPermission("assignments")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
 
   contentPage.innerHTML = `
 
@@ -1331,7 +1278,6 @@ function renderAssignmentsPage() {
       </div>
 
     </div>
-
 
     <div class="dashboard-grid">
 
@@ -1363,9 +1309,7 @@ function renderAssignmentsPage() {
       `).join("")}
 
     </div>
-
   `;
-
 }
 
 
@@ -1374,6 +1318,15 @@ function renderAssignmentsPage() {
    ========================================================= */
 
 function renderAnnouncementsPage() {
+
+  if (!hasPermission("announcements")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
 
   contentPage.innerHTML = `
 
@@ -1385,7 +1338,6 @@ function renderAnnouncementsPage() {
       </div>
 
     </div>
-
 
     ${announcements.map(announcement => `
 
@@ -1408,9 +1360,7 @@ function renderAnnouncementsPage() {
       </div>
 
     `).join("")}
-
   `;
-
 }
 
 
@@ -1420,6 +1370,15 @@ function renderAnnouncementsPage() {
 
 function renderFeesPage(searchTerm = "") {
 
+  if (!hasPermission("fees")) {
+
+    showAccessDenied();
+
+    return;
+
+  }
+
+
   const search =
     searchTerm.toLowerCase().trim();
 
@@ -1427,11 +1386,17 @@ function renderFeesPage(searchTerm = "") {
   const filteredFees =
     fees.filter(record =>
 
-      record.student.toLowerCase().includes(search) ||
+      record.student
+        .toLowerCase()
+        .includes(search) ||
 
-      record.admission.toLowerCase().includes(search) ||
+      record.admission
+        .toLowerCase()
+        .includes(search) ||
 
-      record.className.toLowerCase().includes(search)
+      record.className
+        .toLowerCase()
+        .includes(search)
 
     );
 
@@ -1439,7 +1404,7 @@ function renderFeesPage(searchTerm = "") {
   const totalExpected =
     fees.reduce(
       (sum, record) =>
-        sum + Number(record.total),
+        sum + record.total,
       0
     );
 
@@ -1447,7 +1412,7 @@ function renderFeesPage(searchTerm = "") {
   const totalCollected =
     fees.reduce(
       (sum, record) =>
-        sum + Number(record.paid),
+        sum + record.paid,
       0
     );
 
@@ -1456,25 +1421,13 @@ function renderFeesPage(searchTerm = "") {
     totalExpected - totalCollected;
 
 
-  const fullyPaid =
-    fees.filter(
-      record =>
-        getFeeBalance(record) === 0
-    ).length;
-
-
   contentPage.innerHTML = `
 
     <div class="page-header">
 
       <div>
-
         <h2>Fees Management</h2>
-
-        <p>
-          Manage school fees and payments.
-        </p>
-
+        <p>Manage school fees and payments.</p>
       </div>
 
     </div>
@@ -1483,78 +1436,32 @@ function renderFeesPage(searchTerm = "") {
     <div class="stats-grid">
 
       <div class="stat-card">
-
-        <div class="stat-icon">
-          💵
-        </div>
+        <div class="stat-icon">💵</div>
 
         <div>
-
           <span>Total Expected</span>
-
-          <strong>
-            ${money(totalExpected)}
-          </strong>
-
+          <strong>${money(totalExpected)}</strong>
         </div>
-
       </div>
 
 
       <div class="stat-card">
-
-        <div class="stat-icon">
-          💳
-        </div>
+        <div class="stat-icon">💳</div>
 
         <div>
-
           <span>Total Collected</span>
-
-          <strong>
-            ${money(totalCollected)}
-          </strong>
-
+          <strong>${money(totalCollected)}</strong>
         </div>
-
       </div>
 
 
       <div class="stat-card">
-
-        <div class="stat-icon">
-          ⚠️
-        </div>
+        <div class="stat-icon">⚠️</div>
 
         <div>
-
           <span>Outstanding</span>
-
-          <strong>
-            ${money(outstanding)}
-          </strong>
-
+          <strong>${money(outstanding)}</strong>
         </div>
-
-      </div>
-
-
-      <div class="stat-card">
-
-        <div class="stat-icon">
-          ✅
-        </div>
-
-        <div>
-
-          <span>Fully Paid</span>
-
-          <strong>
-            ${fullyPaid}
-          </strong>
-
-        </div>
-
       </div>
 
     </div>
@@ -1562,20 +1469,7 @@ function renderFeesPage(searchTerm = "") {
 
     <div class="panel">
 
-      <div class="panel-header">
-
-        <div>
-
-          <h3>Student Fees</h3>
-
-          <p>
-            Search students and view balances.
-          </p>
-
-        </div>
-
-      </div>
-
+      <h3>Student Fees</h3>
 
       <input
         type="search"
@@ -1585,7 +1479,7 @@ function renderFeesPage(searchTerm = "") {
         style="
           width:100%;
           padding:12px;
-          margin-bottom:20px;
+          margin:20px 0;
           border:1px solid #e5e7eb;
           border-radius:8px;
         "
@@ -1599,7 +1493,6 @@ function renderFeesPage(searchTerm = "") {
           <thead>
 
             <tr>
-
               <th>Admission</th>
               <th>Student</th>
               <th>Class</th>
@@ -1607,8 +1500,6 @@ function renderFeesPage(searchTerm = "") {
               <th>Paid</th>
               <th>Balance</th>
               <th>Status</th>
-              <th>Action</th>
-
             </tr>
 
           </thead>
@@ -1616,139 +1507,36 @@ function renderFeesPage(searchTerm = "") {
 
           <tbody>
 
-            ${filteredFees.map(record => {
-
-              const balance =
-                getFeeBalance(record);
-
-              const status =
-                getFeeStatus(record);
-
-
-              return `
-
-                <tr>
-
-                  <td>
-                    ${escapeHTML(record.admission)}
-                  </td>
-
-                  <td>
-                    ${escapeHTML(record.student)}
-                  </td>
-
-                  <td>
-                    ${escapeHTML(record.className)}
-                  </td>
-
-                  <td>
-                    ${money(record.total)}
-                  </td>
-
-                  <td>
-                    ${money(record.paid)}
-                  </td>
-
-                  <td>
-                    ${money(balance)}
-                  </td>
-
-                  <td>
-                    ${escapeHTML(status)}
-                  </td>
-
-                  <td>
-
-                    ${
-                      balance > 0
-                      ? `
-                        <button
-                          class="primary-button"
-                          onclick="showRecordPaymentForm('${escapeHTML(record.admission)}')"
-                        >
-                          Record Payment
-                        </button>
-                      `
-                      : "Fully Paid"
-                    }
-
-                  </td>
-
-                </tr>
-
-              `;
-
-            }).join("")}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-
-
-    <div class="panel">
-
-      <div class="panel-header">
-
-        <div>
-
-          <h3>Payment History</h3>
-
-          <p>
-            Recent fee payments.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="table-wrapper">
-
-        <table>
-
-          <thead>
-
-            <tr>
-
-              <th>Student</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Reference</th>
-              <th>Date</th>
-
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-            ${feePayments.map(payment => `
+            ${filteredFees.map(record => `
 
               <tr>
 
                 <td>
-                  ${escapeHTML(payment.student)}
+                  ${escapeHTML(record.admission)}
                 </td>
 
                 <td>
-                  ${money(payment.amount)}
+                  ${escapeHTML(record.student)}
                 </td>
 
                 <td>
-                  ${escapeHTML(payment.method)}
+                  ${escapeHTML(record.className)}
                 </td>
 
                 <td>
-                  ${escapeHTML(payment.reference)}
+                  ${money(record.total)}
                 </td>
 
                 <td>
-                  ${escapeHTML(payment.date)}
+                  ${money(record.paid)}
+                </td>
+
+                <td>
+                  ${money(getFeeBalance(record))}
+                </td>
+
+                <td>
+                  ${escapeHTML(getFeeStatus(record))}
                 </td>
 
               </tr>
@@ -1762,318 +1550,7 @@ function renderFeesPage(searchTerm = "") {
       </div>
 
     </div>
-
   `;
-
-}
-
-
-/* =========================================================
-   RECORD PAYMENT
-   ========================================================= */
-
-function showRecordPaymentForm(
-  selectedAdmission = ""
-) {
-
-  if (!hasPermission("fees")) {
-
-    alert(
-      "You do not have permission to record fee payments."
-    );
-
-    return;
-
-  }
-
-
-  const record =
-    fees.find(
-      item =>
-        item.admission === selectedAdmission
-    );
-
-
-  if (!record) {
-
-    alert("Student fee record not found.");
-
-    return;
-
-  }
-
-
-  const balance =
-    getFeeBalance(record);
-
-
-  contentPage.innerHTML = `
-
-    <div class="page-header">
-
-      <div>
-
-        <h2>Record Fee Payment</h2>
-
-        <p>
-          ${escapeHTML(record.student)}
-        </p>
-
-      </div>
-
-    </div>
-
-
-    <div class="panel">
-
-      <p>
-        <strong>Student:</strong>
-        ${escapeHTML(record.student)}
-      </p>
-
-      <p>
-        <strong>Admission:</strong>
-        ${escapeHTML(record.admission)}
-      </p>
-
-      <p>
-        <strong>Total Fees:</strong>
-        ${money(record.total)}
-      </p>
-
-      <p>
-        <strong>Paid:</strong>
-        ${money(record.paid)}
-      </p>
-
-      <p>
-        <strong>Outstanding:</strong>
-        ${money(balance)}
-      </p>
-
-
-      <form
-        id="paymentForm"
-        style="
-          display:grid;
-          gap:15px;
-          margin-top:20px;
-        "
-      >
-
-        <input
-          type="number"
-          id="paymentAmount"
-          placeholder="Payment amount"
-          min="1"
-          max="${balance}"
-          required
-        >
-
-
-        <select id="paymentMethod" required>
-
-          <option value="">
-            Select payment method
-          </option>
-
-          <option value="M-Pesa">
-            M-Pesa
-          </option>
-
-          <option value="Bank">
-            Bank
-          </option>
-
-          <option value="Cash">
-            Cash
-          </option>
-
-          <option value="Cheque">
-            Cheque
-          </option>
-
-        </select>
-
-
-        <input
-          type="text"
-          id="paymentReference"
-          placeholder="Payment reference"
-          required
-        >
-
-
-        <button
-          type="submit"
-          class="primary-button"
-        >
-          Save Payment
-        </button>
-
-
-        <button
-          type="button"
-          onclick="renderFeesPage()"
-        >
-          Cancel
-        </button>
-
-      </form>
-
-    </div>
-
-  `;
-
-
-  document
-    .getElementById("paymentForm")
-    .addEventListener(
-      "submit",
-      function(event) {
-
-        event.preventDefault();
-
-        recordPaymentForStudent(
-          selectedAdmission
-        );
-
-      }
-    );
-
-}
-
-
-function recordPaymentForStudent(
-  admission
-) {
-
-  if (!hasPermission("fees")) {
-
-    alert(
-      "You do not have permission to record payments."
-    );
-
-    return;
-
-  }
-
-
-  const record =
-    fees.find(
-      item =>
-        item.admission === admission
-    );
-
-
-  if (!record) {
-
-    alert("Student not found.");
-
-    return;
-
-  }
-
-
-  const amount =
-    Number(
-      document.getElementById(
-        "paymentAmount"
-      ).value
-    );
-
-
-  const method =
-    document.getElementById(
-      "paymentMethod"
-    ).value;
-
-
-  const reference =
-    document.getElementById(
-      "paymentReference"
-    ).value.trim();
-
-
-  const balance =
-    getFeeBalance(record);
-
-
-  if (!amount || amount <= 0) {
-
-    alert(
-      "Enter a valid payment amount."
-    );
-
-    return;
-
-  }
-
-
-  if (amount > balance) {
-
-    alert(
-      "Payment cannot be greater than the outstanding balance."
-    );
-
-    return;
-
-  }
-
-
-  if (!method || !reference) {
-
-    alert(
-      "Please complete all payment fields."
-    );
-
-    return;
-
-  }
-
-
-  record.paid += amount;
-
-
-  feePayments.unshift({
-
-    id:
-      "P" +
-      String(feePayments.length + 1)
-        .padStart(3, "0"),
-
-    admission:
-      record.admission,
-
-    student:
-      record.student,
-
-    amount:
-      amount,
-
-    method:
-      method,
-
-    reference:
-      reference,
-
-    date:
-      new Date()
-        .toISOString()
-        .split("T")[0]
-
-  });
-
-
-  alert(
-    `Payment of ${money(amount)} recorded successfully.`
-  );
-
-
-  updateDashboard();
-
-  renderFeesPage();
-
 }
 
 
@@ -2083,23 +1560,35 @@ function recordPaymentForStudent(
 
 function renderNotificationsPage() {
 
-  const visibleNotifications =
-    notifications.filter(notification => {
+  if (!hasPermission("notifications")) {
 
-      if (currentUser.role === "admin") {
-        return true;
-      }
+    showAccessDenied();
 
-      if (notification.audience === "All") {
-        return true;
-      }
+    return;
 
-      return (
-        notification.audience.toLowerCase() ===
-        roleName(currentUser.role).toLowerCase() + "s"
+  }
+
+
+  let visibleNotifications =
+    notifications;
+
+
+  if (currentUser.role !== "admin") {
+
+    visibleNotifications =
+      notifications.filter(
+        notification => {
+
+          return (
+            notification.audience === "All" ||
+            notification.audience.toLowerCase() ===
+            roleName(currentUser.role).toLowerCase() + "s"
+          );
+
+        }
       );
 
-    });
+  }
 
 
   contentPage.innerHTML = `
@@ -2107,74 +1596,18 @@ function renderNotificationsPage() {
     <div class="page-header">
 
       <div>
-
         <h2>Notifications</h2>
-
-        <p>
-          Your school notifications.
-        </p>
-
+        <p>Your school notifications.</p>
       </div>
 
     </div>
 
 
     ${
-      visibleNotifications.length
-      ? visibleNotifications.map(notification => `
+      visibleNotifications.length === 0
 
-          <div
-            class="panel"
-            style="
-              margin-bottom:15px;
-              border-left:
-                4px solid
-                ${notification.read ? "#d1d5db" : "#2563eb"};
-            "
-          >
+      ? `
 
-            <div class="panel-header">
-
-              <div>
-
-                <h3>
-                  🔔 ${escapeHTML(notification.title)}
-                </h3>
-
-                <p>
-                  ${escapeHTML(notification.message)}
-                </p>
-
-                <small>
-                  ${escapeHTML(notification.date)}
-                </small>
-
-              </div>
-
-
-              ${
-                !notification.read
-                ? `
-                  <button
-                    class="text-button"
-                    onclick="markNotificationRead('${escapeHTML(notification.id)}')"
-                  >
-                    Mark as Read
-                  </button>
-                `
-                : `
-                  <span>
-                    ✓ Read
-                  </span>
-                `
-              }
-
-            </div>
-
-          </div>
-
-        `).join("")
-      : `
         <div class="panel">
 
           <h3>No notifications</h3>
@@ -2184,31 +1617,84 @@ function renderNotificationsPage() {
           </p>
 
         </div>
+
       `
+
+      :
+
+      visibleNotifications.map(notification => `
+
+        <div
+          class="panel"
+          style="
+            margin-bottom:15px;
+            border-left:4px solid
+            ${notification.read ? "#d1d5db" : "#2563eb"};
+          "
+        >
+
+          <h3>
+            🔔 ${escapeHTML(notification.title)}
+          </h3>
+
+          <p>
+            ${escapeHTML(notification.message)}
+          </p>
+
+          <small>
+            ${escapeHTML(notification.date)}
+          </small>
+
+        </div>
+
+      `).join("")
+
     }
 
   `;
-
 }
 
 
-function markNotificationRead(id) {
+/* =========================================================
+   ACCESS DENIED PAGE
+   ========================================================= */
 
-  const notification =
-    notifications.find(
-      item =>
-        item.id === id
-    );
+function showAccessDenied() {
 
+  contentPage.innerHTML = `
 
-  if (!notification) {
-    return;
-  }
+    <div class="panel">
 
+      <div style="
+        text-align:center;
+        padding:50px 20px;
+      ">
 
-  notification.read = true;
+        <div style="font-size:60px;">
+          🔒
+        </div>
 
-  renderNotificationsPage();
+        <h2>
+          Access Restricted
+        </h2>
+
+        <p>
+          Your account does not have permission
+          to access this section.
+        </p>
+
+        <button
+          class="primary-button"
+          onclick="showPage('dashboard')"
+        >
+          Return to Dashboard
+        </button>
+
+      </div>
+
+    </div>
+
+  `;
 
 }
 
@@ -2225,6 +1711,14 @@ quickActions.forEach(action => {
 
       const page =
         action.dataset.action;
+
+      if (!hasPermission(page)) {
+
+        alert("Access denied.");
+
+        return;
+
+      }
 
       showPage(page);
 
@@ -2247,6 +1741,21 @@ function initializeApp() {
   dashboardPage.classList.remove("hidden");
 
   contentPage.classList.add("hidden");
+
+
+  /*
+    Make sure all navigation starts visible
+    before a user logs in.
+  */
+
+  navigationItems.forEach(item => {
+    item.style.display = "";
+  });
+
+
+  quickActions.forEach(action => {
+    action.style.display = "";
+  });
 
 }
 
