@@ -1,6 +1,6 @@
 /* =========================================================
    KIRIMUNGE SENIOR SCHOOL MANAGEMENT SYSTEM
-   Students + Teachers + Classes + Attendance
+   COMPLETE FRONTEND VERSION
    ========================================================= */
 const loginPage = document.getElementById("loginPage");
 const appPage = document.getElementById("appPage");
@@ -20,7 +20,7 @@ const navigationItems = document.querySelectorAll(".nav-item");
 const quickActions = document.querySelectorAll(".quick-action");
 const viewAllButton = document.querySelector(".text-button");
 /* =========================================================
-   STUDENTS
+   SCHOOL DATA
    ========================================================= */
 let students = [
   {
@@ -64,9 +64,6 @@ let students = [
     status: "Active"
   }
 ];
-/* =========================================================
-   TEACHERS
-   ========================================================= */
 let teachers = [
   {
     id: "T001",
@@ -105,9 +102,6 @@ let teachers = [
     status: "Active"
   }
 ];
-/* =========================================================
-   SUBJECTS
-   ========================================================= */
 const subjects = [
   "Mathematics",
   "English",
@@ -123,9 +117,6 @@ const subjects = [
   "CRE",
   "Art & Design"
 ];
-/* =========================================================
-   CLASSES
-   ========================================================= */
 let classes = [
   {
     id: "C001",
@@ -204,9 +195,87 @@ let classes = [
   }
 ];
 /* =========================================================
-   ATTENDANCE RECORDS
+   ATTENDANCE
    ========================================================= */
 let attendanceRecords = [];
+/* =========================================================
+   RESULTS
+   ========================================================= */
+let results = [
+  {
+    admission: "KS001",
+    student: "Brian Mwangi",
+    className: "Form 4A",
+    subject: "Mathematics",
+    marks: 82,
+    grade: "A"
+  },
+  {
+    admission: "KS002",
+    student: "Faith Wanjiku",
+    className: "Form 3B",
+    subject: "English",
+    marks: 76,
+    grade: "A"
+  },
+  {
+    admission: "KS003",
+    student: "Kevin Kamau",
+    className: "Form 2A",
+    subject: "Biology",
+    marks: 68,
+    grade: "B"
+  }
+];
+/* =========================================================
+   ASSIGNMENTS
+   ========================================================= */
+let assignments = [
+  {
+    id: "A001",
+    title: "Algebra Revision",
+    subject: "Mathematics",
+    className: "Form 4A",
+    dueDate: "2026-10-10",
+    teacher: "Peter Kamau",
+    status: "Active"
+  },
+  {
+    id: "A002",
+    title: "Essay Writing",
+    subject: "English",
+    className: "Form 3B",
+    dueDate: "2026-10-12",
+    teacher: "Mary Wanjiku",
+    status: "Active"
+  }
+];
+/* =========================================================
+   ANNOUNCEMENTS
+   ========================================================= */
+let announcements = [
+  {
+    id: "N001",
+    title: "Welcome to the new school portal",
+    message: "School administration has launched the new digital portal.",
+    audience: "Everyone",
+    date: "Today"
+  },
+  {
+    id: "N002",
+    title: "Academic calendar",
+    message: "The new academic calendar is now available.",
+    audience: "Students & Teachers",
+    date: "Yesterday"
+  },
+  {
+    id: "N003",
+    title: "School activities",
+    message: "Students are reminded to participate in upcoming activities.",
+    audience: "Students",
+    date: "2 days ago"
+  }
+];
 /* =========================================================
    PAGE INFORMATION
    ========================================================= */
@@ -225,15 +294,15 @@ const pageData = {
   },
   classes: {
     title: "Classes",
-    description: "Manage school classes and class information."
+    description: "Manage school classes and subjects."
   },
   attendance: {
     title: "Attendance",
-    description: "Monitor and record student attendance."
+    description: "Record and monitor student attendance."
   },
   results: {
     title: "Results",
-    description: "Manage student academic performance and examination results."
+    description: "Manage student academic performance."
   },
   assignments: {
     title: "Assignments",
@@ -241,7 +310,7 @@ const pageData = {
   },
   announcements: {
     title: "Announcements",
-    description: "Publish important school announcements and notices."
+    description: "Publish important school announcements."
   }
 };
 /* =========================================================
@@ -313,6 +382,7 @@ function showPage(page) {
     dashboardPage.classList.remove("hidden");
     contentPage.classList.add("hidden");
     pageTitle.textContent = "Dashboard";
+    updateDashboard();
     return;
   }
   dashboardPage.classList.add("hidden");
@@ -334,12 +404,54 @@ function showPage(page) {
     renderAttendancePage();
     return;
   }
-  renderComingSoonPage(page);
+  if (page === "results") {
+    renderResultsPage();
+    return;
+  }
+  if (page === "assignments") {
+    renderAssignmentsPage();
+    return;
+  }
+  if (page === "announcements") {
+    renderAnnouncementsPage();
+    return;
+  }
+}
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+function updateDashboard() {
+  const statCards =
+    document.querySelectorAll(".stat-card");
+  if (statCards.length >= 3) {
+    statCards[0]
+      .querySelector("strong")
+      .textContent = students.length;
+    statCards[1]
+      .querySelector("strong")
+      .textContent = teachers.length;
+    statCards[2]
+      .querySelector("strong")
+      .textContent = classes.length;
+    const present =
+      attendanceRecords.filter(
+        item => item.status === "Present"
+      ).length;
+    const total =
+      attendanceRecords.length;
+    const percentage =
+      total === 0
+        ? 94
+        : Math.round((present / total) * 100);
+    statCards[3]
+      .querySelector("strong")
+      .textContent = percentage + "%";
+  }
 }
 /* =========================================================
    STUDENTS PAGE
    ========================================================= */
-function renderStudentsPage() {
+function renderStudentsPage(searchTerm = "") {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
@@ -373,6 +485,7 @@ function renderStudentsPage() {
           type="search"
           id="studentSearch"
           placeholder="Search students..."
+          value="${searchTerm}"
           style="
             width:260px;
             max-width:100%;
@@ -383,10 +496,10 @@ function renderStudentsPage() {
           "
         >
       </div>
-      <div id="studentTableContainer"></div>
+      <div id="studentTable"></div>
     </div>
   `;
-  renderStudentTable();
+  renderStudentTable(searchTerm);
   document
     .getElementById("studentSearch")
     .addEventListener("input", function() {
@@ -396,57 +509,33 @@ function renderStudentsPage() {
     .getElementById("addStudentButton")
     .addEventListener("click", showAddStudentForm);
 }
-/* =========================================================
-   STUDENT TABLE
-   ========================================================= */
 function renderStudentTable(searchTerm = "") {
   const container =
-    document.getElementById("studentTableContainer");
-  if (!container) {
-    return;
-  }
+    document.getElementById("studentTable");
+  if (!container) return;
   const search =
     searchTerm.toLowerCase().trim();
-  const filteredStudents =
+  const filtered =
     students.filter(function(student) {
       return (
         student.name.toLowerCase().includes(search) ||
         student.admission.toLowerCase().includes(search) ||
-        student.className.toLowerCase().includes(search) ||
-        student.parent.toLowerCase().includes(search)
+        student.className.toLowerCase().includes(search)
       );
     });
-  if (filteredStudents.length === 0) {
-    container.innerHTML = `
-      <div style="
-        text-align:center;
-        padding:45px 20px;
-        color:#6b7280;
-      ">
-        <div style="font-size:35px;">🔎</div>
-        <h3 style="
-          color:#172033;
-          margin:10px 0;
-        ">
-          No students found
-        </h3>
-      </div>
-    `;
-    return;
-  }
   container.innerHTML = `
     <div style="overflow-x:auto;">
       <table style="
         width:100%;
         border-collapse:collapse;
-        min-width:900px;
+        min-width:850px;
       ">
         <thead>
           <tr style="
-            text-align:left;
             border-bottom:1px solid #e5e7eb;
+            text-align:left;
           ">
-            <th style="padding:13px 10px;">Admission No.</th>
+            <th style="padding:13px 10px;">Admission</th>
             <th style="padding:13px 10px;">Student</th>
             <th style="padding:13px 10px;">Gender</th>
             <th style="padding:13px 10px;">Class</th>
@@ -455,49 +544,62 @@ function renderStudentTable(searchTerm = "") {
           </tr>
         </thead>
         <tbody>
-          ${filteredStudents.map(function(student) {
-            return `
-              <tr style="
-                border-bottom:1px solid #f1f5f9;
-              ">
-                <td style="padding:15px 10px;">
-                  <strong>${student.admission}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  <strong>${student.name}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  ${student.gender}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${student.className}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${student.parent}
-                </td>
-                <td style="padding:15px 10px;">
-                  <span style="
-                    background:#dcfce7;
-                    color:#15803d;
-                    padding:5px 9px;
-                    border-radius:20px;
-                    font-size:12px;
-                    font-weight:600;
+          ${
+            filtered.length === 0
+              ? `
+                <tr>
+                  <td colspan="6"
+                    style="
+                      text-align:center;
+                      padding:40px;
+                      color:#6b7280;
+                    ">
+                    No students found.
+                  </td>
+                </tr>
+              `
+              :
+              filtered.map(function(student) {
+                return `
+                  <tr style="
+                    border-bottom:1px solid #f1f5f9;
                   ">
-                    ${student.status}
-                  </span>
-                </td>
-              </tr>
-            `;
-          }).join("")}
+                    <td style="padding:14px 10px;">
+                      <strong>${student.admission}</strong>
+                    </td>
+                    <td style="padding:14px 10px;">
+                      ${student.name}
+                    </td>
+                    <td style="padding:14px 10px;">
+                      ${student.gender}
+                    </td>
+                    <td style="padding:14px 10px;">
+                      ${student.className}
+                    </td>
+                    <td style="padding:14px 10px;">
+                      ${student.parent}
+                    </td>
+                    <td style="padding:14px 10px;">
+                      <span style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:5px 9px;
+                        border-radius:20px;
+                        font-size:12px;
+                        font-weight:600;
+                      ">
+                        ${student.status}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join("")
+          }
         </tbody>
       </table>
     </div>
   `;
 }
-/* =========================================================
-   ADD STUDENT
-   ========================================================= */
 function showAddStudentForm() {
   contentPage.innerHTML = `
     <div class="content-header">
@@ -507,9 +609,9 @@ function showAddStudentForm() {
       </div>
       <button
         class="primary-button"
-        id="backToStudents"
+        id="backStudents"
       >
-        ← Back to Students
+        ← Back
       </button>
     </div>
     <div class="panel">
@@ -523,9 +625,8 @@ function showAddStudentForm() {
             <label>Admission Number</label>
             <input
               id="studentAdmission"
-              type="text"
-              placeholder="e.g. KS006"
               required
+              placeholder="KS006"
               style="
                 width:100%;
                 padding:12px;
@@ -535,12 +636,11 @@ function showAddStudentForm() {
             >
           </div>
           <div>
-            <label>Student Name</label>
+            <label>Full Name</label>
             <input
               id="studentName"
-              type="text"
-              placeholder="Full name"
               required
+              placeholder="Student name"
               style="
                 width:100%;
                 padding:12px;
@@ -579,18 +679,17 @@ function showAddStudentForm() {
               "
             >
               <option value="">Select class</option>
-              ${classes.map(function(item) {
-                return `<option>${item.name}</option>`;
-              }).join("")}
+              ${classes.map(c => `
+                <option>${c.name}</option>
+              `).join("")}
             </select>
           </div>
           <div>
             <label>Parent / Guardian</label>
             <input
               id="studentParent"
-              type="text"
-              placeholder="Parent or guardian name"
               required
+              placeholder="Parent name"
               style="
                 width:100%;
                 padding:12px;
@@ -623,57 +722,58 @@ function showAddStudentForm() {
     </div>
   `;
   document
-    .getElementById("backToStudents")
-    .addEventListener("click", function() {
-      showPage("students");
-    });
+    .getElementById("backStudents")
+    .onclick = () => showPage("students");
   document
     .getElementById("cancelStudent")
-    .addEventListener("click", function() {
-      showPage("students");
-    });
+    .onclick = () => showPage("students");
   document
     .getElementById("studentForm")
     .addEventListener("submit", function(event) {
       event.preventDefault();
-      const newStudent = {
-        admission:
-          document.getElementById("studentAdmission").value.trim(),
-        name:
-          document.getElementById("studentName").value.trim(),
-        gender:
-          document.getElementById("studentGender").value,
-        className:
-          document.getElementById("studentClass").value,
-        parent:
-          document.getElementById("studentParent").value.trim(),
-        status: "Active"
-      };
+      const admission =
+        document.getElementById("studentAdmission").value.trim();
       const duplicate =
-        students.some(function(student) {
-          return student.admission.toLowerCase() ===
-            newStudent.admission.toLowerCase();
-        });
+        students.some(
+          s => s.admission.toLowerCase() === admission.toLowerCase()
+        );
       if (duplicate) {
         alert("That admission number already exists.");
         return;
       }
-      students.push(newStudent);
-      alert(
-        `${newStudent.name} has been registered successfully.`
-      );
+      students.push({
+        admission,
+        name:
+          document
+            .getElementById("studentName")
+            .value.trim(),
+        gender:
+          document
+            .getElementById("studentGender")
+            .value,
+        className:
+          document
+            .getElementById("studentClass")
+            .value,
+        parent:
+          document
+            .getElementById("studentParent")
+            .value.trim(),
+        status: "Active"
+      });
+      alert("Student added successfully.");
       showPage("students");
     });
 }
 /* =========================================================
    TEACHERS PAGE
    ========================================================= */
-function renderTeachersPage() {
+function renderTeachersPage(searchTerm = "") {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
         <h1>Teachers</h1>
-        <p>Manage teachers and teaching information.</p>
+        <p>Manage teaching staff and departments.</p>
       </div>
       <button
         class="primary-button"
@@ -705,20 +805,20 @@ function renderTeachersPage() {
           type="search"
           id="teacherSearch"
           placeholder="Search teachers..."
+          value="${searchTerm}"
           style="
             width:260px;
             max-width:100%;
             padding:11px 13px;
             border:1px solid #e5e7eb;
             border-radius:9px;
-            outline:none;
           "
         >
       </div>
-      <div id="teacherTableContainer"></div>
+      <div id="teacherTable"></div>
     </div>
   `;
-  renderTeacherTable();
+  renderTeacherTable(searchTerm);
   document
     .getElementById("teacherSearch")
     .addEventListener("input", function() {
@@ -726,59 +826,35 @@ function renderTeachersPage() {
     });
   document
     .getElementById("addTeacherButton")
-    .addEventListener("click", showAddTeacherForm);
+    .onclick = showAddTeacherForm;
 }
-/* =========================================================
-   TEACHER TABLE
-   ========================================================= */
 function renderTeacherTable(searchTerm = "") {
   const container =
-    document.getElementById("teacherTableContainer");
-  if (!container) {
-    return;
-  }
+    document.getElementById("teacherTable");
+  if (!container) return;
   const search =
     searchTerm.toLowerCase().trim();
-  const filteredTeachers =
+  const filtered =
     teachers.filter(function(teacher) {
       return (
         teacher.name.toLowerCase().includes(search) ||
-        teacher.id.toLowerCase().includes(search) ||
         teacher.subject.toLowerCase().includes(search) ||
         teacher.department.toLowerCase().includes(search)
       );
     });
-  if (filteredTeachers.length === 0) {
-    container.innerHTML = `
-      <div style="
-        text-align:center;
-        padding:45px 20px;
-        color:#6b7280;
-      ">
-        <div style="font-size:35px;">🔎</div>
-        <h3 style="
-          color:#172033;
-          margin:10px 0;
-        ">
-          No teachers found
-        </h3>
-      </div>
-    `;
-    return;
-  }
   container.innerHTML = `
     <div style="overflow-x:auto;">
       <table style="
         width:100%;
         border-collapse:collapse;
-        min-width:900px;
+        min-width:800px;
       ">
         <thead>
           <tr style="
             text-align:left;
             border-bottom:1px solid #e5e7eb;
           ">
-            <th style="padding:13px 10px;">Teacher ID</th>
+            <th style="padding:13px 10px;">ID</th>
             <th style="padding:13px 10px;">Teacher</th>
             <th style="padding:13px 10px;">Gender</th>
             <th style="padding:13px 10px;">Subject</th>
@@ -787,40 +863,39 @@ function renderTeacherTable(searchTerm = "") {
           </tr>
         </thead>
         <tbody>
-          ${filteredTeachers.map(function(teacher) {
-            return `
-              <tr style="
-                border-bottom:1px solid #f1f5f9;
-              ">
-                <td style="padding:15px 10px;">
-                  <strong>${teacher.id}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  <strong>${teacher.name}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  ${teacher.gender}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${teacher.subject}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${teacher.department}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${teacher.phone}
-                </td>
-              </tr>
-            `;
-          }).join("")}
+          ${
+            filtered.map(function(teacher) {
+              return `
+                <tr style="
+                  border-bottom:1px solid #f1f5f9;
+                ">
+                  <td style="padding:14px 10px;">
+                    <strong>${teacher.id}</strong>
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${teacher.name}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${teacher.gender}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${teacher.subject}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${teacher.department}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${teacher.phone}
+                  </td>
+                </tr>
+              `;
+            }).join("")
+          }
         </tbody>
       </table>
     </div>
   `;
 }
-/* =========================================================
-   ADD TEACHER
-   ========================================================= */
 function showAddTeacherForm() {
   contentPage.innerHTML = `
     <div class="content-header">
@@ -830,9 +905,9 @@ function showAddTeacherForm() {
       </div>
       <button
         class="primary-button"
-        id="backToTeachers"
+        id="backTeachers"
       >
-        ← Back to Teachers
+        ← Back
       </button>
     </div>
     <div class="panel">
@@ -846,8 +921,7 @@ function showAddTeacherForm() {
             <label>Teacher ID</label>
             <input
               id="teacherId"
-              type="text"
-              placeholder="e.g. T005"
+              placeholder="T005"
               required
               style="
                 width:100%;
@@ -858,12 +932,11 @@ function showAddTeacherForm() {
             >
           </div>
           <div>
-            <label>Teacher Name</label>
+            <label>Full Name</label>
             <input
               id="teacherName"
-              type="text"
-              placeholder="Full name"
               required
+              placeholder="Teacher name"
               style="
                 width:100%;
                 padding:12px;
@@ -902,9 +975,7 @@ function showAddTeacherForm() {
               "
             >
               <option value="">Select subject</option>
-              ${subjects.map(function(subject) {
-                return `<option>${subject}</option>`;
-              }).join("")}
+              ${subjects.map(s => `<option>${s}</option>`).join("")}
             </select>
           </div>
           <div>
@@ -924,6 +995,7 @@ function showAddTeacherForm() {
               <option>Languages</option>
               <option>Humanities</option>
               <option>Technical</option>
+              <option>Business</option>
               <option>Creative Arts</option>
             </select>
           </div>
@@ -931,8 +1003,7 @@ function showAddTeacherForm() {
             <label>Phone</label>
             <input
               id="teacherPhone"
-              type="tel"
-              placeholder="e.g. 0712 345 678"
+              placeholder="0712 345 678"
               required
               style="
                 width:100%;
@@ -966,54 +1037,58 @@ function showAddTeacherForm() {
     </div>
   `;
   document
-    .getElementById("backToTeachers")
-    .addEventListener("click", function() {
-      showPage("teachers");
-    });
+    .getElementById("backTeachers")
+    .onclick = () => showPage("teachers");
   document
     .getElementById("cancelTeacher")
-    .addEventListener("click", function() {
-      showPage("teachers");
-    });
+    .onclick = () => showPage("teachers");
   document
     .getElementById("teacherForm")
     .addEventListener("submit", function(event) {
       event.preventDefault();
-      const newTeacher = {
-        id:
-          document.getElementById("teacherId").value.trim(),
-        name:
-          document.getElementById("teacherName").value.trim(),
-        gender:
-          document.getElementById("teacherGender").value,
-        subject:
-          document.getElementById("teacherSubject").value,
-        department:
-          document.getElementById("teacherDepartment").value,
-        phone:
-          document.getElementById("teacherPhone").value.trim(),
-        status: "Active"
-      };
-      const duplicate =
-        teachers.some(function(teacher) {
-          return teacher.id.toLowerCase() ===
-            newTeacher.id.toLowerCase();
-        });
-      if (duplicate) {
+      const id =
+        document.getElementById("teacherId").value.trim();
+      if (
+        teachers.some(
+          teacher =>
+            teacher.id.toLowerCase() === id.toLowerCase()
+        )
+      ) {
         alert("That teacher ID already exists.");
         return;
       }
-      teachers.push(newTeacher);
-      alert(
-        `${newTeacher.name} has been registered successfully.`
-      );
+      teachers.push({
+        id,
+        name:
+          document
+            .getElementById("teacherName")
+            .value.trim(),
+        gender:
+          document
+            .getElementById("teacherGender")
+            .value,
+        subject:
+          document
+            .getElementById("teacherSubject")
+            .value,
+        department:
+          document
+            .getElementById("teacherDepartment")
+            .value,
+        phone:
+          document
+            .getElementById("teacherPhone")
+            .value.trim(),
+        status: "Active"
+      });
+      alert("Teacher added successfully.");
       showPage("teachers");
     });
 }
 /* =========================================================
-   CLASSES PAGE
+   CLASSES
    ========================================================= */
-function renderClassesPage() {
+function renderClassesPage(searchTerm = "") {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
@@ -1052,20 +1127,20 @@ function renderClassesPage() {
           type="search"
           id="classSearch"
           placeholder="Search classes..."
+          value="${searchTerm}"
           style="
             width:260px;
             max-width:100%;
             padding:11px 13px;
             border:1px solid #e5e7eb;
             border-radius:9px;
-            outline:none;
           "
         >
       </div>
       <div id="classTableContainer"></div>
     </div>
   `;
-  renderClassTable();
+  renderClassTable(searchTerm);
   document
     .getElementById("classSearch")
     .addEventListener("input", function() {
@@ -1073,20 +1148,15 @@ function renderClassesPage() {
     });
   document
     .getElementById("addClassButton")
-    .addEventListener("click", showAddClassForm);
+    .onclick = showAddClassForm;
 }
-/* =========================================================
-   CLASS TABLE
-   ========================================================= */
 function renderClassTable(searchTerm = "") {
   const container =
     document.getElementById("classTableContainer");
-  if (!container) {
-    return;
-  }
+  if (!container) return;
   const search =
     searchTerm.toLowerCase().trim();
-  const filteredClasses =
+  const filtered =
     classes.filter(function(item) {
       return (
         item.name.toLowerCase().includes(search) ||
@@ -1094,24 +1164,6 @@ function renderClassTable(searchTerm = "") {
         item.teacher.toLowerCase().includes(search)
       );
     });
-  if (filteredClasses.length === 0) {
-    container.innerHTML = `
-      <div style="
-        text-align:center;
-        padding:45px 20px;
-        color:#6b7280;
-      ">
-        <div style="font-size:35px;">🔎</div>
-        <h3 style="
-          color:#172033;
-          margin:10px 0;
-        ">
-          No classes found
-        </h3>
-      </div>
-    `;
-    return;
-  }
   container.innerHTML = `
     <div style="overflow-x:auto;">
       <table style="
@@ -1134,70 +1186,68 @@ function renderClassTable(searchTerm = "") {
           </tr>
         </thead>
         <tbody>
-          ${filteredClasses.map(function(item) {
-            const studentCount =
-              students.filter(function(student) {
-                return student.className === item.name;
-              }).length;
-            return `
-              <tr style="
-                border-bottom:1px solid #f1f5f9;
-              ">
-                <td style="padding:15px 10px;">
-                  <strong>${item.id}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  <strong>${item.name}</strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  ${item.stream}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${item.teacher}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${studentCount}
-                </td>
-                <td style="padding:15px 10px;">
-                  ${item.capacity}
-                </td>
-                <td style="padding:15px 10px;">
-                  <span style="
-                    background:#eff6ff;
-                    color:#1d4ed8;
-                    padding:5px 9px;
-                    border-radius:20px;
-                    font-size:12px;
-                    font-weight:600;
-                  ">
-                    ${item.subjects.length} subjects
-                  </span>
-                </td>
-              </tr>
-            `;
-          }).join("")}
+          ${
+            filtered.map(function(item) {
+              const studentCount =
+                students.filter(
+                  student =>
+                    student.className === item.name
+                ).length;
+              return `
+                <tr style="
+                  border-bottom:1px solid #f1f5f9;
+                ">
+                  <td style="padding:15px 10px;">
+                    <strong>${item.id}</strong>
+                  </td>
+                  <td style="padding:15px 10px;">
+                    <strong>${item.name}</strong>
+                  </td>
+                  <td style="padding:15px 10px;">
+                    ${item.stream}
+                  </td>
+                  <td style="padding:15px 10px;">
+                    ${item.teacher}
+                  </td>
+                  <td style="padding:15px 10px;">
+                    ${studentCount}
+                  </td>
+                  <td style="padding:15px 10px;">
+                    ${item.capacity}
+                  </td>
+                  <td style="padding:15px 10px;">
+                    <span style="
+                      background:#eff6ff;
+                      color:#1d4ed8;
+                      padding:5px 9px;
+                      border-radius:20px;
+                      font-size:12px;
+                      font-weight:600;
+                    ">
+                      ${item.subjects.length} subjects
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join("")
+          }
         </tbody>
       </table>
     </div>
   `;
 }
-/* =========================================================
-   ADD CLASS
-   ========================================================= */
 function showAddClassForm() {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
         <h1>Add Class</h1>
-        <p>
-          Create a new school class and assign its teacher.
-        </p>
+        <p>Create a new school class.</p>
       </div>
       <button
         class="primary-button"
-        id="backToClasses"
+        id="backClasses"
       >
-        ← Back to Classes
+        ← Back
       </button>
     </div>
     <div class="panel">
@@ -1210,9 +1260,8 @@ function showAddClassForm() {
           <div>
             <label>Class ID</label>
             <input
-              type="text"
               id="classId"
-              placeholder="e.g. C006"
+              placeholder="C006"
               required
               style="
                 width:100%;
@@ -1281,9 +1330,12 @@ function showAddClassForm() {
               "
             >
               <option value="">Select teacher</option>
-              ${teachers.map(function(teacher) {
-                return `<option>${teacher.name}</option>`;
-              }).join("")}
+              ${
+                teachers.map(
+                  teacher =>
+                    `<option>${teacher.name}</option>`
+                ).join("")
+              }
             </select>
           </div>
           <div>
@@ -1316,13 +1368,14 @@ function showAddClassForm() {
                 border-radius:9px;
               "
             >
-              ${subjects.map(function(subject) {
-                return `
-                  <option value="${subject}">
-                    ${subject}
-                  </option>
-                `;
-              }).join("")}
+              ${
+                subjects.map(
+                  subject =>
+                    `<option value="${subject}">
+                      ${subject}
+                    </option>`
+                ).join("")
+              }
             </select>
             <small style="
               display:block;
@@ -1356,15 +1409,11 @@ function showAddClassForm() {
     </div>
   `;
   document
-    .getElementById("backToClasses")
-    .addEventListener("click", function() {
-      showPage("classes");
-    });
+    .getElementById("backClasses")
+    .onclick = () => showPage("classes");
   document
     .getElementById("cancelClass")
-    .addEventListener("click", function() {
-      showPage("classes");
-    });
+    .onclick = () => showPage("classes");
   document
     .getElementById("classForm")
     .addEventListener("submit", function(event) {
@@ -1372,91 +1421,85 @@ function showAddClassForm() {
       const selectedSubjects =
         Array.from(
           document.getElementById("classSubjects").selectedOptions
-        ).map(function(option) {
-          return option.value;
-        });
+        ).map(option => option.value);
       if (selectedSubjects.length === 0) {
         alert("Please select at least one subject.");
         return;
       }
       const newClass = {
         id:
-          document.getElementById("classId").value.trim(),
+          document
+            .getElementById("classId")
+            .value.trim(),
         name:
-          document.getElementById("className").value,
+          document
+            .getElementById("className")
+            .value,
         stream:
-          document.getElementById("classStream").value,
+          document
+            .getElementById("classStream")
+            .value,
         teacher:
-          document.getElementById("classTeacher").value,
+          document
+            .getElementById("classTeacher")
+            .value,
         capacity:
           Number(
-            document.getElementById("classCapacity").value
+            document
+              .getElementById("classCapacity")
+              .value
           ),
-        subjects:
-          selectedSubjects
+        subjects: selectedSubjects
       };
-      const duplicate =
-        classes.some(function(item) {
-          return item.id.toLowerCase() ===
-            newClass.id.toLowerCase();
-        });
-      if (duplicate) {
+      if (
+        classes.some(
+          item =>
+            item.id.toLowerCase() ===
+            newClass.id.toLowerCase()
+        )
+      ) {
         alert("That class ID already exists.");
         return;
       }
-      const classExists =
-        classes.some(function(item) {
-          return item.name.toLowerCase() ===
-            newClass.name.toLowerCase();
-        });
-      if (classExists) {
+      if (
+        classes.some(
+          item =>
+            item.name.toLowerCase() ===
+            newClass.name.toLowerCase()
+        )
+      ) {
         alert("That class already exists.");
         return;
       }
       classes.push(newClass);
-      alert(
-        `${newClass.name} has been created successfully.`
-      );
+      alert("Class created successfully.");
       showPage("classes");
     });
 }
 /* =========================================================
-   ATTENDANCE PAGE
+   ATTENDANCE
    ========================================================= */
 function renderAttendancePage() {
-  const today =
-    new Date().toISOString().split("T")[0];
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
         <h1>Attendance</h1>
-        <p>
-          Record and monitor daily student attendance.
-        </p>
+        <p>Record daily student attendance.</p>
       </div>
     </div>
     <div class="panel">
       <div style="
         display:grid;
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:18px;
-        margin-bottom:25px;
+        grid-template-columns:1fr 1fr;
+        gap:15px;
+        margin-bottom:20px;
       ">
         <div>
-          <label
-            for="attendanceDate"
-            style="
-              display:block;
-              font-weight:600;
-              margin-bottom:8px;
-            "
-          >
-            Attendance Date
-          </label>
+          <label>Date</label>
           <input
             type="date"
             id="attendanceDate"
-            value="${today}"
+            value="${new Date().toISOString().split("T")[0]}"
             style="
               width:100%;
               padding:12px;
@@ -1466,16 +1509,7 @@ function renderAttendancePage() {
           >
         </div>
         <div>
-          <label
-            for="attendanceClass"
-            style="
-              display:block;
-              font-weight:600;
-              margin-bottom:8px;
-            "
-          >
-            Select Class
-          </label>
+          <label>Class</label>
           <select
             id="attendanceClass"
             style="
@@ -1485,601 +1519,927 @@ function renderAttendancePage() {
               border-radius:9px;
             "
           >
-            <option value="">
-              Select class
-            </option>
-            ${classes.map(function(item) {
-              return `
-                <option value="${item.name}">
-                  ${item.name}
-                </option>
-              `;
-            }).join("")}
+            <option value="">Select class</option>
+            ${
+              classes.map(
+                c => `<option>${c.name}</option>`
+              ).join("")
+            }
           </select>
         </div>
       </div>
-      <div id="attendanceArea">
+      <div id="attendanceList">
         <div style="
           text-align:center;
-          padding:50px 20px;
+          padding:45px;
           color:#6b7280;
         ">
-          <div style="font-size:40px;">
-            ✅
-          </div>
-          <h3 style="
-            color:#172033;
-            margin:12px 0 7px;
-          ">
-            Select a class
-          </h3>
-          <p>
-            Choose a class above to load its students.
-          </p>
+          Select a class to record attendance.
         </div>
       </div>
     </div>
   `;
   document
     .getElementById("attendanceClass")
-    .addEventListener("change", function() {
-      renderAttendanceStudents();
-    });
-  document
-    .getElementById("attendanceDate")
-    .addEventListener("change", function() {
-      const classSelect =
-        document.getElementById("attendanceClass");
-      if (classSelect.value) {
-        renderAttendanceStudents();
-      }
-    });
+    .addEventListener("change", renderAttendanceStudents);
 }
-/* =========================================================
-   LOAD STUDENTS FOR ATTENDANCE
-   ========================================================= */
 function renderAttendanceStudents() {
-  const date =
-    document.getElementById("attendanceDate").value;
   const className =
     document.getElementById("attendanceClass").value;
-  const area =
-    document.getElementById("attendanceArea");
-  if (!date || !className) {
-    area.innerHTML = `
+  const date =
+    document.getElementById("attendanceDate").value;
+  const container =
+    document.getElementById("attendanceList");
+  if (!className) {
+    container.innerHTML = `
       <div style="
         text-align:center;
-        padding:45px 20px;
+        padding:45px;
         color:#6b7280;
       ">
-        Please select both a date and class.
+        Select a class to record attendance.
       </div>
     `;
     return;
   }
   const classStudents =
-    students.filter(function(student) {
-      return student.className === className &&
-             student.status === "Active";
-    });
+    students.filter(
+      student =>
+        student.className === className
+    );
   if (classStudents.length === 0) {
-    area.innerHTML = `
+    container.innerHTML = `
       <div style="
         text-align:center;
-        padding:45px 20px;
+        padding:45px;
         color:#6b7280;
       ">
-        <div style="font-size:38px;">
-          👨‍🎓
-        </div>
-        <h3 style="
-          color:#172033;
-          margin:10px 0;
-        ">
-          No students found
-        </h3>
-        <p>
-          There are no active students registered in ${className}.
-        </p>
+        No students are registered in this class.
       </div>
     `;
     return;
   }
-  const existingRecord =
-    attendanceRecords.find(function(record) {
-      return (
-        record.date === date &&
-        record.className === className
-      );
-    });
-  const attendanceMap = {};
-  classStudents.forEach(function(student) {
-    attendanceMap[student.admission] =
-      existingRecord
-        ? (
-            existingRecord.students.find(function(item) {
-              return item.admission === student.admission;
-            })?.status || "Present"
-          )
-        : "Present";
-  });
-  area.innerHTML = `
+  container.innerHTML = `
     <div style="
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:15px;
+      margin-bottom:15px;
       flex-wrap:wrap;
-      margin-bottom:20px;
+      gap:10px;
     ">
       <div>
-        <h3>
-          ${className} Attendance
-        </h3>
+        <h3>${className} Attendance</h3>
         <p style="
           color:#6b7280;
           font-size:13px;
-          margin-top:4px;
         ">
-          ${formatAttendanceDate(date)}
-          · ${classStudents.length} students
+          ${date}
         </p>
       </div>
-      <div style="
-        display:flex;
-        gap:8px;
-        flex-wrap:wrap;
-      ">
-        <button
-          type="button"
-          id="markAllPresent"
-          style="
-            border:1px solid #bbf7d0;
-            background:#f0fdf4;
-            color:#15803d;
-            padding:9px 12px;
-            border-radius:8px;
-            font-weight:600;
-          "
-        >
-          ✓ Mark All Present
-        </button>
-        <button
-          type="button"
-          id="markAllAbsent"
-          style="
-            border:1px solid #fecaca;
-            background:#fef2f2;
-            color:#dc2626;
-            padding:9px 12px;
-            border-radius:8px;
-            font-weight:600;
-          "
-        >
-          ✕ Mark All Absent
-        </button>
-      </div>
-    </div>
-    <div style="
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:12px;
-      margin-bottom:22px;
-    ">
-      <div style="
-        background:#f0fdf4;
-        border:1px solid #dcfce7;
-        padding:15px;
-        border-radius:12px;
-      ">
-        <small style="color:#15803d;">
-          Present
-        </small>
-        <strong
-          id="presentCount"
-          style="
-            display:block;
-            font-size:24px;
-            margin-top:4px;
-          "
-        >
-          0
-        </strong>
-      </div>
-      <div style="
-        background:#fef2f2;
-        border:1px solid #fee2e2;
-        padding:15px;
-        border-radius:12px;
-      ">
-        <small style="color:#dc2626;">
-          Absent
-        </small>
-        <strong
-          id="absentCount"
-          style="
-            display:block;
-            font-size:24px;
-            margin-top:4px;
-          "
-        >
-          0
-        </strong>
-      </div>
-      <div style="
-        background:#fffbeb;
-        border:1px solid #fef3c7;
-        padding:15px;
-        border-radius:12px;
-      ">
-        <small style="color:#b45309;">
-          Late
-        </small>
-        <strong
-          id="lateCount"
-          style="
-            display:block;
-            font-size:24px;
-            margin-top:4px;
-          "
-        >
-          0
-        </strong>
-      </div>
+      <button
+        class="primary-button"
+        id="saveAttendance"
+      >
+        Save Attendance
+      </button>
     </div>
     <div style="overflow-x:auto;">
       <table style="
         width:100%;
         border-collapse:collapse;
-        min-width:700px;
+        min-width:650px;
       ">
         <thead>
           <tr style="
             text-align:left;
             border-bottom:1px solid #e5e7eb;
           ">
-            <th style="padding:13px 10px;">
-              #
-            </th>
-            <th style="padding:13px 10px;">
-              Admission No.
-            </th>
-            <th style="padding:13px 10px;">
-              Student
-            </th>
-            <th style="padding:13px 10px;">
-              Attendance
-            </th>
+            <th style="padding:13px 10px;">Admission</th>
+            <th style="padding:13px 10px;">Student</th>
+            <th style="padding:13px 10px;">Attendance</th>
           </tr>
         </thead>
         <tbody>
-          ${classStudents.map(function(student, index) {
-            const status =
-              attendanceMap[student.admission];
-            return `
-              <tr
-                data-admission="${student.admission}"
-                style="
+          ${
+            classStudents.map(function(student) {
+              return `
+                <tr style="
                   border-bottom:1px solid #f1f5f9;
-                "
-              >
-                <td style="padding:15px 10px;">
-                  ${index + 1}
-                </td>
-                <td style="padding:15px 10px;">
-                  <strong>
-                    ${student.admission}
-                  </strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  <strong>
+                ">
+                  <td style="padding:14px 10px;">
+                    <strong>${student.admission}</strong>
+                  </td>
+                  <td style="padding:14px 10px;">
                     ${student.name}
-                  </strong>
-                </td>
-                <td style="padding:15px 10px;">
-                  <div style="
-                    display:flex;
-                    gap:7px;
-                    flex-wrap:wrap;
-                  ">
-                    <button
-                      type="button"
-                      class="attendance-status-button"
-                      data-status="Present"
+                  </td>
+                  <td style="padding:14px 10px;">
+                    <select
+                      class="attendance-status"
                       data-admission="${student.admission}"
                       style="
-                        padding:8px 12px;
+                        padding:9px;
+                        border:1px solid #e5e7eb;
                         border-radius:8px;
-                        border:1px solid #bbf7d0;
-                        cursor:pointer;
-                        font-weight:600;
-                        background:${
-                          status === "Present"
-                            ? "#16a34a"
-                            : "#f0fdf4"
-                        };
-                        color:${
-                          status === "Present"
-                            ? "white"
-                            : "#15803d"
-                        };
                       "
                     >
-                      ✓ Present
-                    </button>
-                    <button
-                      type="button"
-                      class="attendance-status-button"
-                      data-status="Absent"
-                      data-admission="${student.admission}"
-                      style="
-                        padding:8px 12px;
-                        border-radius:8px;
-                        border:1px solid #fecaca;
-                        cursor:pointer;
-                        font-weight:600;
-                        background:${
-                          status === "Absent"
-                            ? "#dc2626"
-                            : "#fef2f2"
-                        };
-                        color:${
-                          status === "Absent"
-                            ? "white"
-                            : "#dc2626"
-                        };
-                      "
-                    >
-                      ✕ Absent
-                    </button>
-                    <button
-                      type="button"
-                      class="attendance-status-button"
-                      data-status="Late"
-                      data-admission="${student.admission}"
-                      style="
-                        padding:8px 12px;
-                        border-radius:8px;
-                        border:1px solid #fde68a;
-                        cursor:pointer;
-                        font-weight:600;
-                        background:${
-                          status === "Late"
-                            ? "#d97706"
-                            : "#fffbeb"
-                        };
-                        color:${
-                          status === "Late"
-                            ? "white"
-                            : "#b45309"
-                        };
-                      "
-                    >
-                      ⏰ Late
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `;
-          }).join("")}
+                      <option>Present</option>
+                      <option>Absent</option>
+                      <option>Late</option>
+                    </select>
+                  </td>
+                </tr>
+              `;
+            }).join("")
+          }
         </tbody>
       </table>
     </div>
-    <div style="
-      display:flex;
-      justify-content:flex-end;
-      margin-top:22px;
-    ">
-      <button
-        class="primary-button"
-        id="saveAttendance"
-      >
-        💾 Save Attendance
-      </button>
-    </div>
   `;
-  let statuses = {};
-  classStudents.forEach(function(student) {
-    statuses[student.admission] =
-      attendanceMap[student.admission];
-  });
-  function updateSummary() {
-    const values =
-      Object.values(statuses);
-    const present =
-      values.filter(status => status === "Present").length;
-    const absent =
-      values.filter(status => status === "Absent").length;
-    const late =
-      values.filter(status => status === "Late").length;
-    document.getElementById("presentCount").textContent =
-      present;
-    document.getElementById("absentCount").textContent =
-      absent;
-    document.getElementById("lateCount").textContent =
-      late;
-  }
-  function refreshButtons() {
-    document
-      .querySelectorAll(".attendance-status-button")
-      .forEach(function(button) {
-        const admission =
-          button.dataset.admission;
-        const status =
-          button.dataset.status;
-        const active =
-          statuses[admission] === status;
-        if (status === "Present") {
-          button.style.background =
-            active ? "#16a34a" : "#f0fdf4";
-          button.style.color =
-            active ? "white" : "#15803d";
-        }
-        if (status === "Absent") {
-          button.style.background =
-            active ? "#dc2626" : "#fef2f2";
-          button.style.color =
-            active ? "white" : "#dc2626";
-        }
-        if (status === "Late") {
-          button.style.background =
-            active ? "#d97706" : "#fffbeb";
-          button.style.color =
-            active ? "white" : "#b45309";
-        }
-      });
-    updateSummary();
-  }
-  document
-    .querySelectorAll(".attendance-status-button")
-    .forEach(function(button) {
-      button.addEventListener("click", function() {
-        statuses[this.dataset.admission] =
-          this.dataset.status;
-        refreshButtons();
-      });
-    });
-  document
-    .getElementById("markAllPresent")
-    .addEventListener("click", function() {
-      classStudents.forEach(function(student) {
-        statuses[student.admission] =
-          "Present";
-      });
-      refreshButtons();
-    });
-  document
-    .getElementById("markAllAbsent")
-    .addEventListener("click", function() {
-      classStudents.forEach(function(student) {
-        statuses[student.admission] =
-          "Absent";
-      });
-      refreshButtons();
-    });
   document
     .getElementById("saveAttendance")
     .addEventListener("click", function() {
-      saveAttendanceRecord(
-        date,
-        className,
-        classStudents,
-        statuses
-      );
+      const statuses =
+        document.querySelectorAll(".attendance-status");
+      statuses.forEach(function(select) {
+        const admission =
+          select.dataset.admission;
+        const student =
+          students.find(
+            s => s.admission === admission
+          );
+        attendanceRecords =
+          attendanceRecords.filter(
+            record =>
+              !(
+                record.admission === admission &&
+                record.date === date
+              )
+          );
+        attendanceRecords.push({
+          admission,
+          student: student.name,
+          className,
+          date,
+          status: select.value
+        });
+      });
+      alert("Attendance saved successfully.");
+      updateDashboard();
     });
-  refreshButtons();
 }
 /* =========================================================
-   SAVE ATTENDANCE
+   RESULTS
    ========================================================= */
-function saveAttendanceRecord(
-  date,
-  className,
-  classStudents,
-  statuses
-) {
-  const recordStudents =
-    classStudents.map(function(student) {
-      return {
-        admission:
-          student.admission,
-        name:
-          student.name,
-        status:
-          statuses[student.admission] || "Present"
-      };
-    });
-  const existingIndex =
-    attendanceRecords.findIndex(function(record) {
-      return (
-        record.date === date &&
-        record.className === className
-      );
-    });
-  const record = {
-    date: date,
-    className: className,
-    students: recordStudents,
-    savedAt: new Date().toISOString()
-  };
-  if (existingIndex !== -1) {
-    attendanceRecords[existingIndex] =
-      record;
-  } else {
-    attendanceRecords.push(record);
-  }
-  const present =
-    recordStudents.filter(
-      student => student.status === "Present"
-    ).length;
-  const absent =
-    recordStudents.filter(
-      student => student.status === "Absent"
-    ).length;
-  const late =
-    recordStudents.filter(
-      student => student.status === "Late"
-    ).length;
-  alert(
-    `Attendance saved successfully!\n\n` +
-    `${className}\n` +
-    `${formatAttendanceDate(date)}\n\n` +
-    `Present: ${present}\n` +
-    `Absent: ${absent}\n` +
-    `Late: ${late}`
-  );
-}
-/* =========================================================
-   ATTENDANCE DATE FORMAT
-   ========================================================= */
-function formatAttendanceDate(dateString) {
-  const date =
-    new Date(dateString + "T00:00:00");
-  return date.toLocaleDateString(
-    "en-KE",
-    {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    }
-  );
-}
-/* =========================================================
-   OTHER MODULES
-   ========================================================= */
-function renderComingSoonPage(page) {
-  const data = pageData[page];
+function renderResultsPage() {
   contentPage.innerHTML = `
     <div class="content-header">
       <div>
-        <h1>
-          ${data.title}
-        </h1>
-        <p>
-          ${data.description}
-        </p>
+        <h1>Results</h1>
+        <p>Manage student examination results.</p>
       </div>
-      <button class="primary-button">
-        + Add New
+      <button
+        class="primary-button"
+        id="addResultButton"
+      >
+        + Enter Result
       </button>
     </div>
     <div class="panel">
-      <div class="empty-state">
-        <div class="empty-icon">
-          🏫
-        </div>
-        <h2>
-          ${data.title} Management
-        </h2>
-        <p>
-          This module is ready for development.
-          The next stage will connect it to real school
-          records and database services.
-        </p>
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+        gap:10px;
+      ">
+        <h3>Academic Results</h3>
+        <input
+          type="search"
+          id="resultSearch"
+          placeholder="Search results..."
+          style="
+            width:260px;
+            padding:11px 13px;
+            border:1px solid #e5e7eb;
+            border-radius:9px;
+          "
+        >
       </div>
+      <div id="resultsTable"></div>
     </div>
   `;
+  renderResultsTable();
+  document
+    .getElementById("resultSearch")
+    .addEventListener("input", function() {
+      renderResultsTable(this.value);
+    });
+  document
+    .getElementById("addResultButton")
+    .onclick = showAddResultForm;
+}
+function getGrade(marks) {
+  if (marks >= 80) return "A";
+  if (marks >= 70) return "B";
+  if (marks >= 60) return "C";
+  if (marks >= 50) return "D";
+  return "E";
+}
+function renderResultsTable(searchTerm = "") {
+  const container =
+    document.getElementById("resultsTable");
+  if (!container) return;
+  const search =
+    searchTerm.toLowerCase().trim();
+  const filtered =
+    results.filter(function(result) {
+      return (
+        result.student.toLowerCase().includes(search) ||
+        result.subject.toLowerCase().includes(search) ||
+        result.className.toLowerCase().includes(search)
+      );
+    });
+  container.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        min-width:750px;
+      ">
+        <thead>
+          <tr style="
+            text-align:left;
+            border-bottom:1px solid #e5e7eb;
+          ">
+            <th style="padding:13px 10px;">Admission</th>
+            <th style="padding:13px 10px;">Student</th>
+            <th style="padding:13px 10px;">Class</th>
+            <th style="padding:13px 10px;">Subject</th>
+            <th style="padding:13px 10px;">Marks</th>
+            <th style="padding:13px 10px;">Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            filtered.map(function(result) {
+              return `
+                <tr style="
+                  border-bottom:1px solid #f1f5f9;
+                ">
+                  <td style="padding:14px 10px;">
+                    ${result.admission}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    <strong>${result.student}</strong>
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${result.className}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${result.subject}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${result.marks}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    <span style="
+                      background:#eff6ff;
+                      color:#1d4ed8;
+                      padding:5px 10px;
+                      border-radius:20px;
+                      font-weight:700;
+                    ">
+                      ${result.grade}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join("")
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function showAddResultForm() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Enter Result</h1>
+        <p>Add an academic result for a student.</p>
+      </div>
+      <button
+        class="primary-button"
+        id="backResults"
+      >
+        ← Back
+      </button>
+    </div>
+    <div class="panel">
+      <form id="resultForm">
+        <div style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+        ">
+          <div>
+            <label>Student</label>
+            <select
+              id="resultStudent"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">Select student</option>
+              ${
+                students.map(
+                  student => `
+                    <option value="${student.admission}">
+                      ${student.name} — ${student.className}
+                    </option>
+                  `
+                ).join("")
+              }
+            </select>
+          </div>
+          <div>
+            <label>Subject</label>
+            <select
+              id="resultSubject"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">Select subject</option>
+              ${
+                subjects.map(
+                  subject => `<option>${subject}</option>`
+                ).join("")
+              }
+            </select>
+          </div>
+          <div>
+            <label>Marks</label>
+            <input
+              type="number"
+              id="resultMarks"
+              min="0"
+              max="100"
+              required
+              placeholder="0 - 100"
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+        </div>
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:25px;
+        ">
+          <button
+            type="button"
+            id="cancelResult"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Result
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  document
+    .getElementById("backResults")
+    .onclick = () => showPage("results");
+  document
+    .getElementById("cancelResult")
+    .onclick = () => showPage("results");
+  document
+    .getElementById("resultForm")
+    .addEventListener("submit", function(event) {
+      event.preventDefault();
+      const admission =
+        document.getElementById("resultStudent").value;
+      const student =
+        students.find(
+          s => s.admission === admission
+        );
+      const marks =
+        Number(
+          document.getElementById("resultMarks").value
+        );
+      if (marks < 0 || marks > 100) {
+        alert("Marks must be between 0 and 100.");
+        return;
+      }
+      results.push({
+        admission,
+        student: student.name,
+        className: student.className,
+        subject:
+          document.getElementById("resultSubject").value,
+        marks,
+        grade: getGrade(marks)
+      });
+      alert("Result saved successfully.");
+      showPage("results");
+    });
+}
+/* =========================================================
+   ASSIGNMENTS
+   ========================================================= */
+function renderAssignmentsPage() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Assignments</h1>
+        <p>Create and manage student assignments.</p>
+      </div>
+      <button
+        class="primary-button"
+        id="addAssignmentButton"
+      >
+        + Add Assignment
+      </button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:18px;">
+        Assignment Directory
+      </h3>
+      <div id="assignmentList"></div>
+    </div>
+  `;
+  renderAssignmentList();
+  document
+    .getElementById("addAssignmentButton")
+    .onclick = showAddAssignmentForm;
+}
+function renderAssignmentList() {
+  const container =
+    document.getElementById("assignmentList");
+  if (!container) return;
+  container.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        min-width:800px;
+      ">
+        <thead>
+          <tr style="
+            text-align:left;
+            border-bottom:1px solid #e5e7eb;
+          ">
+            <th style="padding:13px 10px;">ID</th>
+            <th style="padding:13px 10px;">Assignment</th>
+            <th style="padding:13px 10px;">Subject</th>
+            <th style="padding:13px 10px;">Class</th>
+            <th style="padding:13px 10px;">Due Date</th>
+            <th style="padding:13px 10px;">Teacher</th>
+            <th style="padding:13px 10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            assignments.map(function(item) {
+              return `
+                <tr style="
+                  border-bottom:1px solid #f1f5f9;
+                ">
+                  <td style="padding:14px 10px;">
+                    ${item.id}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    <strong>${item.title}</strong>
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${item.subject}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${item.className}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${item.dueDate}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    ${item.teacher}
+                  </td>
+                  <td style="padding:14px 10px;">
+                    <span style="
+                      background:#dcfce7;
+                      color:#166534;
+                      padding:5px 9px;
+                      border-radius:20px;
+                      font-size:12px;
+                      font-weight:600;
+                    ">
+                      ${item.status}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join("")
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function showAddAssignmentForm() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Add Assignment</h1>
+        <p>Create a new student assignment.</p>
+      </div>
+      <button
+        class="primary-button"
+        id="backAssignments"
+      >
+        ← Back
+      </button>
+    </div>
+    <div class="panel">
+      <form id="assignmentForm">
+        <div style="
+          display:grid;
+          grid-template-columns:repeat(2,minmax(0,1fr));
+          gap:18px;
+        ">
+          <div>
+            <label>Assignment Title</label>
+            <input
+              id="assignmentTitle"
+              required
+              placeholder="e.g. Algebra Revision"
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>Subject</label>
+            <select
+              id="assignmentSubject"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">Select subject</option>
+              ${
+                subjects.map(
+                  s => `<option>${s}</option>`
+                ).join("")
+              }
+            </select>
+          </div>
+          <div>
+            <label>Class</label>
+            <select
+              id="assignmentClass"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">Select class</option>
+              ${
+                classes.map(
+                  c => `<option>${c.name}</option>`
+                ).join("")
+              }
+            </select>
+          </div>
+          <div>
+            <label>Due Date</label>
+            <input
+              type="date"
+              id="assignmentDueDate"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>Teacher</label>
+            <select
+              id="assignmentTeacher"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option value="">Select teacher</option>
+              ${
+                teachers.map(
+                  teacher =>
+                    `<option>${teacher.name}</option>`
+                ).join("")
+              }
+            </select>
+          </div>
+        </div>
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:25px;
+        ">
+          <button
+            type="button"
+            id="cancelAssignment"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  document
+    .getElementById("backAssignments")
+    .onclick = () => showPage("assignments");
+  document
+    .getElementById("cancelAssignment")
+    .onclick = () => showPage("assignments");
+  document
+    .getElementById("assignmentForm")
+    .addEventListener("submit", function(event) {
+      event.preventDefault();
+      const nextId =
+        "A" +
+        String(assignments.length + 1).padStart(3, "0");
+      assignments.push({
+        id: nextId,
+        title:
+          document
+            .getElementById("assignmentTitle")
+            .value.trim(),
+        subject:
+          document
+            .getElementById("assignmentSubject")
+            .value,
+        className:
+          document
+            .getElementById("assignmentClass")
+            .value,
+        dueDate:
+          document
+            .getElementById("assignmentDueDate")
+            .value,
+        teacher:
+          document
+            .getElementById("assignmentTeacher")
+            .value,
+        status: "Active"
+      });
+      alert("Assignment created successfully.");
+      showPage("assignments");
+    });
+}
+/* =========================================================
+   ANNOUNCEMENTS
+   ========================================================= */
+function renderAnnouncementsPage() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>Announcements</h1>
+        <p>Publish important school announcements.</p>
+      </div>
+      <button
+        class="primary-button"
+        id="addAnnouncementButton"
+      >
+        + New Announcement
+      </button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:18px;">
+        School Notices
+      </h3>
+      <div id="announcementList"></div>
+    </div>
+  `;
+  renderAnnouncementList();
+  document
+    .getElementById("addAnnouncementButton")
+    .onclick = showAddAnnouncementForm;
+}
+function renderAnnouncementList() {
+  const container =
+    document.getElementById("announcementList");
+  if (!container) return;
+  container.innerHTML = announcements.map(function(item) {
+    return `
+      <div style="
+        display:flex;
+        gap:15px;
+        padding:18px 0;
+        border-bottom:1px solid #e5e7eb;
+      ">
+        <div style="
+          width:45px;
+          height:45px;
+          border-radius:12px;
+          background:#eff6ff;
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          font-size:22px;
+          flex-shrink:0;
+        ">
+          📢
+        </div>
+        <div>
+          <h3 style="
+            margin-bottom:5px;
+          ">
+            ${item.title}
+          </h3>
+          <p style="
+            color:#6b7280;
+            line-height:1.5;
+            margin-bottom:7px;
+          ">
+            ${item.message}
+          </p>
+          <small style="color:#9ca3af;">
+            ${item.audience} • ${item.date}
+          </small>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+function showAddAnnouncementForm() {
+  contentPage.innerHTML = `
+    <div class="content-header">
+      <div>
+        <h1>New Announcement</h1>
+        <p>Create a school-wide notice.</p>
+      </div>
+      <button
+        class="primary-button"
+        id="backAnnouncements"
+      >
+        ← Back
+      </button>
+    </div>
+    <div class="panel">
+      <form id="announcementForm">
+        <div style="
+          display:flex;
+          flex-direction:column;
+          gap:18px;
+        ">
+          <div>
+            <label>Announcement Title</label>
+            <input
+              id="announcementTitle"
+              required
+              placeholder="Announcement title"
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+          </div>
+          <div>
+            <label>Message</label>
+            <textarea
+              id="announcementMessage"
+              required
+              rows="6"
+              placeholder="Write announcement..."
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+                resize:vertical;
+              "
+            ></textarea>
+          </div>
+          <div>
+            <label>Audience</label>
+            <select
+              id="announcementAudience"
+              required
+              style="
+                width:100%;
+                padding:12px;
+                border:1px solid #e5e7eb;
+                border-radius:9px;
+              "
+            >
+              <option>Everyone</option>
+              <option>Students</option>
+              <option>Teachers</option>
+              <option>Parents</option>
+              <option>Students & Teachers</option>
+              <option>Parents & Students</option>
+            </select>
+          </div>
+        </div>
+        <div style="
+          display:flex;
+          justify-content:flex-end;
+          gap:10px;
+          margin-top:25px;
+        ">
+          <button
+            type="button"
+            id="cancelAnnouncement"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Publish Announcement
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+  document
+    .getElementById("backAnnouncements")
+    .onclick = () => showPage("announcements");
+  document
+    .getElementById("cancelAnnouncement")
+    .onclick = () => showPage("announcements");
+  document
+    .getElementById("announcementForm")
+    .addEventListener("submit", function(event) {
+      event.preventDefault();
+      announcements.unshift({
+        id:
+          "N" +
+          String(announcements.length + 1)
+            .padStart(3, "0"),
+        title:
+          document
+            .getElementById("announcementTitle")
+            .value.trim(),
+        message:
+          document
+            .getElementById("announcementMessage")
+            .value.trim(),
+        audience:
+          document
+            .getElementById("announcementAudience")
+            .value,
+        date: "Today"
+      });
+      alert("Announcement published successfully.");
+      showPage("announcements");
+    });
 }
 /* =========================================================
    QUICK ACTIONS
@@ -2098,7 +2458,7 @@ quickActions.forEach(function(button, index) {
   });
 });
 /* =========================================================
-   ANNOUNCEMENTS BUTTON
+   VIEW ALL ANNOUNCEMENTS
    ========================================================= */
 if (viewAllButton) {
   viewAllButton.addEventListener("click", function() {
@@ -2117,12 +2477,9 @@ logoutButton.addEventListener("click", function() {
   appPage.classList.add("hidden");
   loginPage.classList.remove("hidden");
   loginForm.reset();
-  profileName.textContent =
-    "Administrator";
-  profileRole.textContent =
-    "Administrator";
-  profileAvatar.textContent =
-    "A";
+  profileName.textContent = "Administrator";
+  profileRole.textContent = "Administrator";
+  profileAvatar.textContent = "A";
   welcomeMessage.textContent =
     "Welcome to Kirimunge Senior School.";
   showPage("dashboard");
