@@ -37,6 +37,124 @@ const quickActions =
 let currentUser = null;
 
 
+
+/* =========================================================
+   SUPABASE CONNECTION AND DATA LOADING
+   Row Level Security in the database decides what each role sees.
+   ========================================================= */
+
+const sb = window.supabase.createClient(
+  window.SUPABASE_URL,
+  window.SUPABASE_PUBLISHABLE_KEY
+);
+
+function toUiRole(dbRole) {
+  return dbRole === "class_teacher" ? "teacher" : dbRole;
+}
+
+function letterGrade(marks) {
+  if (marks >= 80) return "A";
+  if (marks >= 70) return "B";
+  if (marks >= 60) return "C";
+  if (marks >= 50) return "D";
+  return "E";
+}
+
+function cap(text) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+async function loadSchoolData(role) {
+
+  const staff = role === "admin" || role === "teacher";
+
+  const [stu, cls, res, asg, ann, bal, pay, att, tch] = await Promise.all([
+    sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
+    sb.from("classes").select("name").order("name"),
+    sb.from("results").select("score, students(admission_no, full_name), subjects(name)"),
+    sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
+    sb.from("announcements").select("title, body, created_at").order("created_at", { ascending: false }),
+    sb.from("fee_balances").select("student_id, total_due, total_paid"),
+    sb.from("fee_payments").select("amount, method, reference, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
+    sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
+    staff
+      ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"])
+      : Promise.resolve({ data: [] })
+  ]);
+
+  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch].find(r => r.error);
+  if (failed) {
+    throw new Error(failed.error.message);
+  }
+
+  students = stu.data.map(s => ({
+    id: s.id,
+    classId: s.class_id,
+    admission: s.admission_no,
+    name: s.full_name,
+    className: s.classes ? s.classes.name : "Unassigned",
+    gender: "-"
+  }));
+
+  classes = cls.data.map(c => c.name);
+
+  results = res.data.map(r => ({
+    admission: r.students.admission_no,
+    student: r.students.full_name,
+    subject: r.subjects.name,
+    marks: Number(r.score),
+    grade: letterGrade(Number(r.score))
+  }));
+
+  assignments = asg.data.map(x => ({
+    title: x.title,
+    subject: x.subjects ? x.subjects.name : "",
+    className: x.classes ? x.classes.name : "",
+    dueDate: x.due_at ? x.due_at.split("T")[0] : ""
+  }));
+
+  announcements = ann.data.map(x => ({
+    title: x.title,
+    message: x.body,
+    author: "School Administration",
+    date: x.created_at.split("T")[0]
+  }));
+
+  const balances = new Map(bal.data.map(b => [b.student_id, b]));
+  fees = students
+    .filter(s => balances.has(s.id))
+    .map(s => ({
+      admission: s.admission,
+      student: s.name,
+      className: s.className,
+      total: Number(balances.get(s.id).total_due),
+      paid: Number(balances.get(s.id).total_paid)
+    }));
+
+  feePayments = pay.data.map((p, i) => ({
+    id: "P" + String(i + 1).padStart(3, "0"),
+    admission: p.students.admission_no,
+    student: p.students.full_name,
+    amount: Number(p.amount),
+    method: p.method || "",
+    reference: p.reference || "",
+    date: p.paid_at.split("T")[0]
+  }));
+
+  attendanceRecords = att.data.map(r => ({
+    admission: r.students.admission_no,
+    student: r.students.full_name,
+    status: cap(r.status),
+    date: r.attendance_date
+  }));
+
+  teachers = tch.data.map(t => ({
+    id: t.id,
+    name: t.full_name,
+    subject: ""
+  }));
+}
+
 /* =========================================================
    ROLE PERMISSIONS
    ========================================================= */
@@ -154,221 +272,34 @@ const pageInfo = {
    SAMPLE DATA
    ========================================================= */
 
-let students = [
-  {
-    admission: "KS001",
-    name: "Brian Mwangi",
-    className: "Form 4A",
-    gender: "Male"
-  },
-  {
-    admission: "KS002",
-    name: "Faith Wanjiku",
-    className: "Form 3B",
-    gender: "Female"
-  },
-  {
-    admission: "KS003",
-    name: "Kevin Kamau",
-    className: "Form 2A",
-    gender: "Male"
-  },
-  {
-    admission: "KS004",
-    name: "Sharon Njeri",
-    className: "Form 1A",
-    gender: "Female"
-  },
-  {
-    admission: "KS005",
-    name: "Daniel Kariuki",
-    className: "Form 4A",
-    gender: "Male"
-  }
-];
+let students = [];
 
 
-let teachers = [
-  {
-    id: "T001",
-    name: "Peter Kamau",
-    subject: "Mathematics"
-  },
-  {
-    id: "T002",
-    name: "Mary Wanjiku",
-    subject: "English"
-  },
-  {
-    id: "T003",
-    name: "James Kariuki",
-    subject: "Biology"
-  },
-  {
-    id: "T004",
-    name: "Jane Njeri",
-    subject: "Chemistry"
-  }
-];
+let teachers = [];
 
 
-let classes = [
-  "Form 1A",
-  "Form 1B",
-  "Form 2A",
-  "Form 3B",
-  "Form 4A"
-];
+let classes = [];
 
 
 let attendanceRecords = [];
 
 
-let results = [
-  {
-    admission: "KS001",
-    student: "Brian Mwangi",
-    subject: "Mathematics",
-    marks: 82,
-    grade: "A"
-  },
-  {
-    admission: "KS002",
-    student: "Faith Wanjiku",
-    subject: "English",
-    marks: 74,
-    grade: "B+"
-  },
-  {
-    admission: "KS003",
-    student: "Kevin Kamau",
-    subject: "Biology",
-    marks: 68,
-    grade: "B"
-  }
-];
+let results = [];
 
 
-let assignments = [
-  {
-    title: "Algebra Exercise",
-    subject: "Mathematics",
-    className: "Form 4A",
-    dueDate: "2026-10-10"
-  },
-  {
-    title: "Essay Writing",
-    subject: "English",
-    className: "Form 3B",
-    dueDate: "2026-10-12"
-  }
-];
+let assignments = [];
 
 
-let announcements = [
-  {
-    title: "Welcome Back",
-    message: "Welcome to the new school term.",
-    author: "School Administration",
-    date: "2026-10-01"
-  },
-  {
-    title: "Examination Schedule",
-    message: "The examination timetable will be released soon.",
-    author: "Academic Department",
-    date: "2026-10-02"
-  }
-];
+let announcements = [];
 
 
-let fees = [
-  {
-    admission: "KS001",
-    student: "Brian Mwangi",
-    className: "Form 4A",
-    total: 45000,
-    paid: 30000
-  },
-  {
-    admission: "KS002",
-    student: "Faith Wanjiku",
-    className: "Form 3B",
-    total: 45000,
-    paid: 45000
-  },
-  {
-    admission: "KS003",
-    student: "Kevin Kamau",
-    className: "Form 2A",
-    total: 42000,
-    paid: 25000
-  },
-  {
-    admission: "KS004",
-    student: "Sharon Njeri",
-    className: "Form 1A",
-    total: 40000,
-    paid: 18000
-  },
-  {
-    admission: "KS005",
-    student: "Daniel Kariuki",
-    className: "Form 4A",
-    total: 45000,
-    paid: 40000
-  }
-];
+let fees = [];
 
 
-let feePayments = [
-  {
-    id: "P001",
-    admission: "KS001",
-    student: "Brian Mwangi",
-    amount: 30000,
-    method: "M-Pesa",
-    reference: "MPESA001",
-    date: "2026-10-01"
-  },
-  {
-    id: "P002",
-    admission: "KS002",
-    student: "Faith Wanjiku",
-    amount: 45000,
-    method: "Bank",
-    reference: "BANK001",
-    date: "2026-09-20"
-  },
-  {
-    id: "P003",
-    admission: "KS003",
-    student: "Kevin Kamau",
-    amount: 25000,
-    method: "M-Pesa",
-    reference: "MPESA002",
-    date: "2026-09-28"
-  }
-];
+let feePayments = [];
 
 
-let notifications = [
-  {
-    id: "N001",
-    title: "Welcome to Kirimunge Senior School",
-    message: "Your school management account is ready.",
-    audience: "All",
-    date: "2026-10-01",
-    read: false
-  },
-  {
-    id: "N002",
-    title: "Examination Information",
-    message: "Please check the examination announcements.",
-    audience: "Students",
-    date: "2026-10-02",
-    read: false
-  }
-];
+let notifications = [];
 
 
 /* =========================================================
@@ -545,76 +476,87 @@ function applyRoleAccess() {
    LOGIN
    ========================================================= */
 
-loginForm.addEventListener(
-  "submit",
-  function(event) {
+loginForm.addEventListener("submit", async function(event) {
 
-    event.preventDefault();
+  event.preventDefault();
 
-    const role = userRole.value;
+  const chosenRole = userRole.value;
+  const email = usernameInput.value.trim();
+  const password = passwordInput.value;
 
-    const username =
-      usernameInput.value.trim();
+  if (!chosenRole) {
+    alert("Please select your role.");
+    return;
+  }
 
-    const password =
-      passwordInput.value.trim();
+  if (!email || !password) {
+    alert("Please enter your email and password.");
+    return;
+  }
 
+  const submitButton = loginForm.querySelector("button[type='submit']");
+  if (submitButton) submitButton.disabled = true;
 
-    if (!role) {
+  try {
 
-      alert("Please select your role.");
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
+    if (error) {
+      alert("Invalid email or password.");
       return;
     }
 
+    const { data: profile, error: profileError } = await sb
+      .from("profiles")
+      .select("full_name, role")
+      .eq("id", data.user.id)
+      .single();
 
-    if (!username || !password) {
-
-      alert(
-        "Please enter your username and password."
-      );
-
+    if (profileError || !profile) {
+      await sb.auth.signOut();
+      alert("Your account has no profile. Contact the administrator.");
       return;
     }
 
+    const role = toUiRole(profile.role);
 
-    currentUser = {
-      username: username,
-      role: role
-    };
+    /* The database role is the authority, not the dropdown. */
+    if (role !== chosenRole) {
+      await sb.auth.signOut();
+      alert("This account is not registered as " + roleName(chosenRole) + ".");
+      return;
+    }
 
+    await loadSchoolData(role);
 
-    profileName.textContent =
-      username;
+    const displayName = profile.full_name || email;
 
-    profileRole.textContent =
-      roleName(role);
+    currentUser = { username: displayName, role: role, id: data.user.id };
 
-    profileAvatar.textContent =
-      username.charAt(0).toUpperCase();
-
-
+    profileName.textContent = displayName;
+    profileRole.textContent = roleName(role);
+    profileAvatar.textContent = displayName.charAt(0).toUpperCase();
     welcomeMessage.textContent =
-      `Welcome, ${username}. You are logged in as a ${roleName(role)}.`;
-
+      `Welcome, ${displayName}. You are logged in as a ${roleName(role)}.`;
 
     loginPage.classList.add("hidden");
-
     appPage.classList.remove("hidden");
 
-
-    /*
-       THIS MUST RUN AFTER LOGIN
-    */
-
     applyRoleAccess();
-
     updateDashboard();
-
     showPage("dashboard");
 
+  } catch (err) {
+
+    await sb.auth.signOut();
+    alert("Could not load school data: " + err.message);
+
+  } finally {
+
+    if (submitButton) submitButton.disabled = false;
+
   }
-);
+});
 
 
 /* =========================================================
@@ -624,6 +566,8 @@ loginForm.addEventListener(
 logoutButton.addEventListener(
   "click",
   function() {
+
+    sb.auth.signOut();
 
     currentUser = null;
 
@@ -1127,53 +1071,53 @@ function renderAttendancePage() {
 }
 
 
-function setAttendance(admission, status) {
+async function setAttendance(admission, status) {
 
   if (!hasPermission("attendance")) {
-
     alert("Access denied.");
-
     return;
-
   }
-
 
   if (!status) {
     return;
   }
 
-
-  const student =
-    students.find(
-      item =>
-        item.admission === admission
-    );
-
+  const student = students.find(item => item.admission === admission);
 
   if (!student) {
     return;
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
+  const { error } = await sb.from("student_attendance").upsert(
+    {
+      student_id: student.id,
+      class_id: student.classId,
+      attendance_date: today,
+      status: status.toLowerCase(),
+      marked_by: currentUser.id
+    },
+    { onConflict: "student_id,attendance_date" }
+  );
+
+  if (error) {
+    alert("Could not save attendance: " + error.message);
+    return;
+  }
+
+  attendanceRecords = attendanceRecords.filter(
+    r => !(r.admission === admission && r.date === today)
+  );
 
   attendanceRecords.push({
-
     admission: admission,
-
     student: student.name,
-
     status: status,
-
-    date:
-      new Date()
-        .toISOString()
-        .split("T")[0]
-
+    date: today
   });
 
-
-  alert(
-    `Attendance marked as ${status}.`
-  );
+  alert(`Attendance marked as ${status}.`);
 
 }
 
