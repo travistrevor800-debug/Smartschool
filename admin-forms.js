@@ -9,7 +9,7 @@
     .entry-form h3{margin:0 0 4px}
     .entry-form input,.entry-form select{padding:10px;font-size:16px;border:1px solid #ccc;border-radius:6px;width:100%;box-sizing:border-box}
     .entry-form button{padding:11px;font-size:16px;border:0;border-radius:6px;background:#1f5fbf;color:#fff;cursor:pointer}
-    .entry-form button:disabled{opacity:.6}
+    .entry-form button:disabled{opacity:.6}\n    .class-admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ddd}\n    .class-admin-row small{display:block;color:#667085;margin-top:3px}\n    .class-admin-row .danger-button{background:#b42318;padding:8px 12px}
   `;
   document.head.appendChild(style);
 
@@ -161,6 +161,100 @@
         <select name="subject_id" required>${opts(subjectRows, "id", "name", "Select subject")}</select>
         <button type="submit">Assign</button>
       </form>`;
+  });
+
+  wrap("renderClassesPage", async () => {
+    if (!isAdmin()) return "";
+
+    setTimeout(() => {
+      attach("addClassForm", async d => {
+        const grade = Number(d.grade);
+        const name = d.name.trim();
+        const stream = d.stream.trim();
+        if (![10, 11, 12].includes(grade)) throw new Error("Choose a valid grade.");
+        if (!name || !stream) throw new Error("Class name and stream are required.");
+
+        const duplicate = await sb.from("classes")
+          .select("id").eq("grade", grade).ilike("name", name).maybeSingle();
+        if (duplicate.error) throw duplicate.error;
+        if (duplicate.data) throw new Error("A class with this name already exists in that grade.");
+
+        check(await sb.from("classes").insert({ name, grade, stream }));
+      });
+
+      document.querySelectorAll("[data-delete-class]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!isAdmin()) {
+            alert("Only an administrator can delete classes.");
+            return;
+          }
+          const classId = button.dataset.deleteClass;
+          const record = classRecords.find(c => c.id === classId);
+          if (!record) return alert("Class record not found. Refresh and try again.");
+          if (!confirm(`Delete ${record.name}? This is allowed only when no students, lessons, assignments, exams, learning materials or teacher allocations depend on it.`)) return;
+
+          button.disabled = true;
+          try {
+            const dependencies = [
+              ["students", "Students"],
+              ["teacher_assignments", "Teacher assignments"],
+              ["revision_materials", "Revision materials"],
+              ["assignments", "Assignments"],
+              ["lessons", "Lessons"],
+              ["assessments", "Assessments"]
+            ];
+            const used = [];
+            for (const [table, label] of dependencies) {
+              const { count, error } = await sb.from(table)
+                .select("id", { count: "exact", head: true })
+                .eq("class_id", classId);
+              if (error) throw error;
+              if (count > 0) used.push(`${label}: ${count}`);
+            }
+            if (used.length) {
+              throw new Error("This class still has linked records and cannot be deleted safely: " + used.join(", ") + ". Move or remove those records first.");
+            }
+
+            const { error: deleteError } = await sb.from("classes").delete().eq("id", classId);
+            if (deleteError) throw deleteError;
+            await loadSchoolData(currentUser.role);
+            showPage("classes");
+            alert("Class deleted.");
+          } catch (err) {
+            alert("Could not delete class: " + (err.message || err));
+            button.disabled = false;
+          }
+        });
+      });
+    });
+
+    return `
+      <form id="addClassForm" class="entry-form">
+        <h3>Add a class or stream</h3>
+        <label for="newClassGrade">Grade / Form</label>
+        <select id="newClassGrade" name="grade" required>
+          <option value="">Select grade</option>
+          <option value="10">Grade 10 / Form 2</option>
+          <option value="11">Grade 11 / Form 3</option>
+          <option value="12">Grade 12 / Form 4</option>
+        </select>
+        <label for="newClassName">Class name</label>
+        <input id="newClassName" name="name" placeholder="e.g. Form 4 South" required>
+        <label for="newClassStream">Stream</label>
+        <input id="newClassStream" name="stream" placeholder="e.g. South" required>
+        <button type="submit">Add class</button>
+      </form>
+
+      <div class="entry-form">
+        <h3>Manage classes</h3>
+        <p>Only administrators can delete classes. Deletion is blocked while linked school records exist.</p>
+        ${classRecords.map(c => `
+          <div class="class-admin-row">
+            <div><strong>${esc(c.name)}</strong><small>Grade ${esc(c.grade)} · ${esc(c.stream || "No stream")}</small></div>
+            <button type="button" class="danger-button" data-delete-class="${esc(c.id)}">Delete</button>
+          </div>
+        `).join("")}
+      </div>`;
   });
 
   wrap("renderFeesPage", async () => {
