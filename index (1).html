@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kirimunge Senior School Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- LOGIN PAGE -->
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+
+      <div class="login-logo">🏫</div>
+
+      <h1>Kirimunge Senior School</h1>
+      <p class="login-subtitle">School Management System</p>
+
+      <form id="loginForm">
+
+        <label for="userRole">Login As</label>
+
+        <select id="userRole" required>
+          <option value="">Select your role</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="parent">Parent</option>
+          <option value="admin">Administrator</option>
+        </select>
+
+        <label for="username">Email</label>
+
+        <input
+          type="email"
+          id="username"
+          placeholder="Enter your email"
+          required
+        >
+
+        <label for="password">Password</label>
+
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter password"
+          required
+        >
+
+        <button type="submit" class="primary-button">
+          Login
+        </button>
+
+      </form>
+
+    </div>
+  </section>
+
+
+  <!-- APPLICATION -->
+  <section id="appPage" class="app-page hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="brand">
+        <div>🏫</div>
+        <div>
+          <strong>Kirimunge</strong>
+          <span>Senior School</span>
+        </div>
+      </div>
+
+
+      <!-- NAVIGATION -->
+      <nav class="sidebar-nav">
+
+        <button class="nav-item active" data-page="dashboard">
+          📊 <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" data-page="students">
+          👨‍🎓 <span>Students</span>
+        </button>
+
+        <button class="nav-item" data-page="teachers">
+          👩‍🏫 <span>Teachers</span>
+        </button>
+
+        <button class="nav-item" data-page="classes">
+          🏫 <span>Classes</span>
+        </button>
+
+        <button class="nav-item" data-page="attendance">
+          📅 <span>Attendance</span>
+        </button>
+
+        <button class="nav-item" data-page="results">
+          📝 <span>Results</span>
+        </button>
+
+        <button class="nav-item" data-page="assignments">
+          📚 <span>Assignments</span>
+        </button>
+
+        <button class="nav-item" data-page="announcements">
+          📢 <span>Announcements</span>
+        </button>
+
+        <button class="nav-item" data-page="fees">
+          💰 <span>Fees</span>
+        </button>
+
+        <button class="nav-item" data-page="notifications">
+          🔔 <span>Notifications</span>
+        </button>
+
+      </nav>
+
+
+      <!-- LOGOUT -->
+      <div class="sidebar-bottom">
+
+        <button id="logoutButton" class="logout-button">
+          🚪 Logout
+        </button>
+
+      </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOP BAR -->
+      <header class="topbar">
+
+        <div class="topbar-left">
+
+          <h1 id="pageTitle">Dashboard</h1>
+
+          <p id="welcomeMessage">
+            Welcome to Kirimunge Senior School.
+          </p>
+
+        </div>
+
+
+        <!-- PROFILE -->
+        <div class="profile-area">
+
+          <div id="profileAvatar" class="profile-avatar">
+            ?
+          </div>
+
+          <div class="profile-details">
+
+            <strong id="profileName">
+              User
+            </strong>
+
+            <span id="profileRole">
+              User
+            </span>
+
+          </div>
+
+        </div>
+
+      </header>
+
+
+      <!-- DASHBOARD -->
+      <section id="dashboardPage" class="page-section">
+
+        <div class="page-header">
+
+          <div>
+            <h2>School Dashboard</h2>
+
+            <p>
+              Overview of Kirimunge Senior School.
+            </p>
+          </div>
+
+        </div>
+
+
+        <!-- STATISTICS -->
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <div class="stat-icon">👨‍🎓</div>
+            <div>
+              <span>Students</span>
+              <strong class="stat-value">5</strong>
+            </div>
+          </div>
+
+
+          <div class="stat-card">
+            <div class="stat-icon">👩‍🏫</div>
+            <div>
+              <span>Teachers</span>
+              <strong class="stat-value">4</strong>
+            </div>
+          </div>
+
+
+          <div class="stat-card">
+            <div class="stat-icon">🏫</div>
+            <div>
+              <span>Classes</span>
+              <strong class="stat-value">5</strong>
+            </div>
+          </div>
+
+
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div>
+              <span>Outstanding Fees</span>
+              <strong class="stat-value">KSh 69,000</strong>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- DASHBOARD GRID -->
+        <div class="dashboard-grid">
+
+
+          <!-- ANNOUNCEMENTS -->
+          <div class="panel">
+
+            <div class="panel-header">
+
+              <div>
+                <h3>Recent Announcements</h3>
+                <p>Latest school announcements.</p>
+              </div>
+
+              <button
+                class="text-button"
+                onclick="showPage('announcements')"
+              >
+                View All
+              </button>
+
+            </div>
+
+            <div id="recentAnnouncements">
+
+              <div class="announcement-item">
+
+                <strong>Welcome Back</strong>
+
+                <p>
+                  Welcome to the new school term.
+                </p>
+
+                <small>
+                  School Administration
+                </small>
+
+              </div>
+
+
+              <div class="announcement-item">
+
+                <strong>Examination Schedule</strong>
+
+                <p>
+                  The examination timetable will be released soon.
+                </p>
+
+                <small>
+                  Academic Department
+                </small>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- QUICK ACTIONS -->
+          <div class="panel">
+
+            <div class="panel-header">
+
+              <div>
+                <h3>Quick Actions</h3>
+                <p>Frequently used features.</p>
+              </div>
+
+            </div>
+
+
+            <div class="quick-actions">
+
+              <button
+                class="quick-action"
+                data-action="students"
+              >
+                <span>👨‍🎓</span>
+                <strong>Add Student</strong>
+              </button>
+
+
+              <button
+                class="quick-action"
+                data-action="attendance"
+              >
+                <span>📅</span>
+                <strong>Attendance</strong>
+              </button>
+
+
+              <button
+                class="quick-action"
+                data-action="results"
+              >
+                <span>📝</span>
+                <strong>Results</strong>
+              </button>
+
+
+              <button
+                class="quick-action"
+                data-action="announcements"
+              >
+                <span>📢</span>
+                <strong>Announcement</strong>
+              </button>
+
+
+              <button
+                class="quick-action"
+                data-action="fees"
+              >
+                <span>💰</span>
+                <strong>Fees</strong>
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- FEES OVERVIEW -->
+        <div class="panel">
+
+          <div class="panel-header">
+
+            <div>
+              <h3>Fees Overview</h3>
+              <p>Current school fee collection.</p>
+            </div>
+
+            <button
+              class="text-button"
+              onclick="showPage('fees')"
+            >
+              Manage Fees
+            </button>
+
+          </div>
+
+
+          <div class="stats-grid">
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                💵
+              </div>
+
+              <div>
+
+                <span>Total Expected</span>
+
+                <strong>
+                  KSh 217,000
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                💳
+              </div>
+
+              <div>
+
+                <span>Total Collected</span>
+
+                <strong>
+                  KSh 148,000
+                </strong>
+
+              </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+              <div class="stat-icon">
+                ⚠️
+              </div>
+
+              <div>
+
+                <span>Outstanding</span>
+
+                <strong>
+                  KSh 69,000
+                </strong>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- DYNAMIC CONTENT -->
+      <section
+        id="contentPage"
+        class="page-section hidden"
+      ></section>
+
+    </main>
+
+  </section>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script src="admin-forms.js"></script>
+
+</body>
+</html>
