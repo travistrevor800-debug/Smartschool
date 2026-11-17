@@ -34,10 +34,15 @@
     const btn = form.querySelector("button");
     btn.disabled = true;
     try {
-      await work(Object.fromEntries(new FormData(form)));
+      const result = await work(Object.fromEntries(new FormData(form)));
       await loadSchoolData(currentUser.role);
       showPage(document.querySelector("[data-page].active").dataset.page);
-      alert("Saved.");
+      if (result && result.studentAdmission) {
+        alert("Student login created.\nLogin ID: " + result.studentAdmission +
+          "\nInitial password: the same admission number.\nThe student must change it at first login.");
+      } else {
+        alert("Saved.");
+      }
     } catch (err) {
       alert("Could not save: " + (err.message || err));
       btn.disabled = false;
@@ -51,6 +56,23 @@
 
   const check = ({ error }) => { if (error) throw error; };
   const studentOptions = () => students.map(s => ({ id: s.id, name: `${s.admission} - ${s.name}` }));
+
+
+  async function createAccount(body) {
+    const { data, error } = await sb.functions.invoke("create-user", { body });
+    if (error) {
+      let msg = error.message;
+      try { const r = await error.context.json(); if (r && r.error) msg = r.error; } catch (e) {}
+      throw new Error(msg);
+    }
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  const toBody = (d, role) => ({
+    email: d.email.trim(), password: d.password, full_name: d.name.trim(),
+    role: role || d.role, student_id: d.student_id || undefined
+  });
 
   /* ---------- wrap each page renderer ---------- */
 
@@ -67,11 +89,24 @@
   wrap("renderStudentsPage", async () => {
     if (!isAdmin()) return "";
     const { classRows } = await lookups();
+
     setTimeout(() => {
       attach("addStudentForm", async d => check(await sb.from("students").insert({
-        admission_no: d.admission.trim(), full_name: d.name.trim(), class_id: d.class_id || null
+        admission_no: d.admission.trim(),
+        full_name: d.name.trim(),
+        class_id: d.class_id || null
       })));
+
+      attach("studentLoginForm", async d => {
+        const student = students.find(s => s.id === d.student_id);
+        if (!student) throw new Error("Select a valid student record first.");
+        const result = await createAccount({ role: "student", student_id: d.student_id });
+        return { ...result, studentAdmission: student.admission };
+      });
+
+      attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
     });
+
     return `
       <form id="addStudentForm" class="entry-form">
         <h3>Register student</h3>
@@ -79,6 +114,22 @@
         <input name="name" placeholder="Full name" required>
         <select name="class_id" required>${opts(classRows, "id", "name", "Select class")}</select>
         <button type="submit">Add student</button>
+      </form>
+
+      <form id="studentLoginForm" class="entry-form">
+        <h3>Create student login</h3>
+        <p>The student's admission number will be the login ID and temporary password. The student must create a new password at first login.</p>
+        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select student")}</select>
+        <button type="submit">Create student login</button>
+      </form>
+
+      <form id="parentLoginForm" class="entry-form">
+        <h3>Create parent login</h3>
+        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select linked child")}</select>
+        <input name="name" placeholder="Parent or guardian full name" required>
+        <input name="email" type="email" placeholder="Parent email address" required>
+        <input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required>
+        <button type="submit">Create parent login</button>
       </form>`;
   });
 
@@ -86,11 +137,23 @@
     if (!isAdmin()) return "";
     const { classRows, subjectRows } = await lookups();
     setTimeout(() => {
+      attach("teacherLoginForm", async d => createAccount(toBody(d)));
       attach("assignTeacherForm", async d => check(await sb.from("teacher_assignments").insert({
         teacher_id: d.teacher_id, class_id: d.class_id, subject_id: d.subject_id
       })));
     });
     return `
+      <form id="teacherLoginForm" class="entry-form">
+        <h3>Create teacher account</h3>
+        <input name="name" placeholder="Full name" required>
+        <input name="email" type="email" placeholder="Email address" required>
+        <input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required>
+        <select name="role" required>
+          <option value="teacher">Teacher</option>
+          <option value="class_teacher">Class teacher</option>
+        </select>
+        <button type="submit">Create teacher</button>
+      </form>
       <form id="assignTeacherForm" class="entry-form">
         <h3>Assign teacher to a class and subject</h3>
         <select name="teacher_id" required>${opts(teachers, "id", "name", "Select teacher")}</select>
