@@ -70,7 +70,7 @@ async function loadSchoolData(role) {
 
   const [stu, cls, res, asg, ann, bal, pay, att, tch] = await Promise.all([
     sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
-    sb.from("classes").select("name").order("name"),
+    sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
     sb.from("results").select("score, students(admission_no, full_name), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("title, body, created_at").order("created_at", { ascending: false }),
@@ -96,7 +96,8 @@ async function loadSchoolData(role) {
     gender: "-"
   }));
 
-  classes = cls.data.map(c => c.name);
+  classRecords = cls.data || [];
+  classes = classRecords.map(c => c.name);
 
   results = res.data.map(r => ({
     admission: r.students.admission_no,
@@ -279,6 +280,7 @@ let teachers = [];
 
 
 let classes = [];
+let classRecords = [];
 
 
 let attendanceRecords = [];
