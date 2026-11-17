@@ -476,21 +476,148 @@ function applyRoleAccess() {
    LOGIN
    ========================================================= */
 
-loginForm.addEventListener("submit", async function(event) {
+function admissionNumberToEmail(admissionNo) {
+  const normalized = String(admissionNo || "").trim().toLowerCase();
+  const bytes = new TextEncoder().encode(normalized);
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  return `student.${hex}@login.smartschool.invalid`;
+}
 
+function updateLoginIdentityField() {
+  const isStudent = userRole.value === "student";
+  usernameInput.type = isStudent ? "text" : "email";
+  usernameInput.placeholder = isStudent
+    ? "Enter your admission number"
+    : "Enter your email address";
+  const label = document.querySelector('label[for="username"]');
+  if (label) label.textContent = isStudent ? "Admission number" : "Email address";
+}
+userRole.addEventListener("change", updateLoginIdentityField);
+updateLoginIdentityField();
+
+async function completeAuthenticatedLogin(user, loginIdentity, chosenRole) {
+  const { data: profile, error: profileError } = await sb
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    await sb.auth.signOut();
+    throw new Error("Your account has no profile. Contact the administrator.");
+  }
+
+  const role = toUiRole(profile.role);
+  if (role !== chosenRole) {
+    await sb.auth.signOut();
+    throw new Error("This account is not registered as " + roleName(chosenRole) + ".");
+  }
+
+  await loadSchoolData(role);
+  const displayName = profile.full_name || loginIdentity;
+  currentUser = { username: displayName, role, id: user.id };
+
+  profileName.textContent = displayName;
+  profileRole.textContent = roleName(role);
+  profileAvatar.textContent = displayName.charAt(0).toUpperCase();
+  welcomeMessage.textContent =
+    `Welcome, ${displayName}. You are logged in as a ${roleName(role)}.`;
+
+  const firstLoginForm = document.getElementById("firstLoginPasswordForm");
+  if (firstLoginForm) firstLoginForm.remove();
+  loginForm.classList.add("hidden");
+  loginPage.classList.add("hidden");
+  appPage.classList.remove("hidden");
+
+  applyRoleAccess();
+  updateDashboard();
+  showPage("dashboard");
+}
+
+function showFirstLoginPasswordChange(loginIdentity, chosenRole) {
+  loginForm.classList.add("hidden");
+  passwordInput.value = "";
+
+  const previous = document.getElementById("firstLoginPasswordForm");
+  if (previous) previous.remove();
+
+  const form = document.createElement("form");
+  form.id = "firstLoginPasswordForm";
+  form.className = "entry-form";
+  form.innerHTML = `
+    <h2>Secure your student account</h2>
+    <p>Your admission number was used as your temporary password. Create a new password before entering Smartschool.</p>
+    <label for="firstNewPassword">New password (at least 10 characters)</label>
+    <input id="firstNewPassword" name="new_password" type="password" minlength="10" autocomplete="new-password" required>
+    <label for="firstConfirmPassword">Confirm new password</label>
+    <input id="firstConfirmPassword" name="confirm_password" type="password" minlength="10" autocomplete="new-password" required>
+    <button type="submit" class="primary-button">Save new password</button>
+    <button type="button" id="cancelFirstLogin" class="secondary-button">Back to login</button>
+  `;
+  loginForm.insertAdjacentElement("afterend", form);
+
+  form.querySelector("#cancelFirstLogin").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    form.remove();
+    loginForm.classList.remove("hidden");
+    loginForm.reset();
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const newPassword = form.elements.new_password.value;
+    const confirmPassword = form.elements.confirm_password.value;
+    const button = form.querySelector("button[type='submit']");
+    if (newPassword.length < 10) {
+      alert("Choose a password with at least 10 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert("The two passwords do not match.");
+      return;
+    }
+    button.disabled = true;
+    try {
+      const { data, error } = await sb.functions.invoke("complete-first-login", {
+        body: { password: newPassword }
+      });
+      if (error) {
+        let message = error.message || "Could not update password.";
+        try {
+          const detail = await error.context.json();
+          if (detail && detail.error) message = detail.error;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      if (data && data.error) throw new Error(data.error);
+
+      const { data: refreshed, error: refreshError } = await sb.auth.refreshSession();
+      if (refreshError || !refreshed.session) {
+        throw new Error("Password changed, but your session could not be refreshed. Please sign in again with your new password.");
+      }
+      await completeAuthenticatedLogin(refreshed.session.user, loginIdentity, chosenRole);
+    } catch (err) {
+      alert(err.message || String(err));
+      button.disabled = false;
+    }
+  });
+}
+
+loginForm.addEventListener("submit", async function(event) {
   event.preventDefault();
 
   const chosenRole = userRole.value;
-  const email = usernameInput.value.trim();
+  const loginIdentity = usernameInput.value.trim();
   const password = passwordInput.value;
 
   if (!chosenRole) {
     alert("Please select your role.");
     return;
   }
-
-  if (!email || !password) {
-    alert("Please enter your email and password.");
+  if (!loginIdentity || !password) {
+    alert(chosenRole === "student"
+      ? "Please enter your admission number and password."
+      : "Please enter your email and password.");
     return;
   }
 
@@ -498,63 +625,27 @@ loginForm.addEventListener("submit", async function(event) {
   if (submitButton) submitButton.disabled = true;
 
   try {
+    const email = chosenRole === "student"
+      ? admissionNumberToEmail(loginIdentity)
+      : loginIdentity.toLowerCase();
 
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      alert("Invalid email or password.");
+    if (error || !data.user) {
+      alert("Invalid login ID or password.");
       return;
     }
 
-    const { data: profile, error: profileError } = await sb
-      .from("profiles")
-      .select("full_name, role")
-      .eq("id", data.user.id)
-      .single();
-
-    if (profileError || !profile) {
-      await sb.auth.signOut();
-      alert("Your account has no profile. Contact the administrator.");
+    if (data.user.app_metadata?.must_change_password === true) {
+      showFirstLoginPasswordChange(loginIdentity, chosenRole);
       return;
     }
 
-    const role = toUiRole(profile.role);
-
-    /* The database role is the authority, not the dropdown. */
-    if (role !== chosenRole) {
-      await sb.auth.signOut();
-      alert("This account is not registered as " + roleName(chosenRole) + ".");
-      return;
-    }
-
-    await loadSchoolData(role);
-
-    const displayName = profile.full_name || email;
-
-    currentUser = { username: displayName, role: role, id: data.user.id };
-
-    profileName.textContent = displayName;
-    profileRole.textContent = roleName(role);
-    profileAvatar.textContent = displayName.charAt(0).toUpperCase();
-    welcomeMessage.textContent =
-      `Welcome, ${displayName}. You are logged in as a ${roleName(role)}.`;
-
-    loginPage.classList.add("hidden");
-    appPage.classList.remove("hidden");
-
-    applyRoleAccess();
-    updateDashboard();
-    showPage("dashboard");
-
+    await completeAuthenticatedLogin(data.user, loginIdentity, chosenRole);
   } catch (err) {
-
     await sb.auth.signOut();
-    alert("Could not load school data: " + err.message);
-
+    alert("Could not load school data: " + (err.message || err));
   } finally {
-
     if (submitButton) submitButton.disabled = false;
-
   }
 });
 
@@ -563,41 +654,26 @@ loginForm.addEventListener("submit", async function(event) {
    LOGOUT
    ========================================================= */
 
-logoutButton.addEventListener(
-  "click",
-  function() {
+logoutButton.addEventListener("click", async function() {
+  await sb.auth.signOut();
+  currentUser = null;
+  appPage.classList.add("hidden");
+  loginPage.classList.remove("hidden");
+  loginForm.classList.remove("hidden");
+  loginForm.reset();
 
-    sb.auth.signOut();
+  const firstLoginForm = document.getElementById("firstLoginPasswordForm");
+  if (firstLoginForm) firstLoginForm.remove();
 
-    currentUser = null;
-
-    appPage.classList.add("hidden");
-
-    loginPage.classList.remove("hidden");
-
-    loginForm.reset();
-
-    /*
-       Restore sidebar for the next login.
-    */
-
-    navigationItems.forEach(item => {
-      item.style.display = "";
-      item.removeAttribute("aria-hidden");
-    });
-
-
-    quickActions.forEach(action => {
-      action.style.display = "";
-    });
-
-
-    dashboardPage.classList.remove("hidden");
-
-    contentPage.classList.add("hidden");
-
-  }
-);
+  navigationItems.forEach(item => {
+    item.style.display = "";
+    item.removeAttribute("aria-hidden");
+  });
+  quickActions.forEach(action => { action.style.display = ""; });
+  dashboardPage.classList.remove("hidden");
+  contentPage.classList.add("hidden");
+  updateLoginIdentityField();
+});
 
 
 /* =========================================================
