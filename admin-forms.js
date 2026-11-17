@@ -197,6 +197,7 @@
           try {
             const dependencies = [
               ["students", "Students"],
+              ["student_attendance", "Attendance history"],
               ["teacher_assignments", "Teacher assignments"],
               ["revision_materials", "Revision materials"],
               ["assignments", "Assignments"],
@@ -206,7 +207,7 @@
             const used = [];
             for (const [table, label] of dependencies) {
               const { count, error } = await sb.from(table)
-                .select("id", { count: "exact", head: true })
+                .select("*", { count: "exact", head: true })
                 .eq("class_id", classId);
               if (error) throw error;
               if (count > 0) used.push(`${label}: ${count}`);
