@@ -41,7 +41,7 @@
         alert("Student login created.\nLogin ID: " + result.studentAdmission +
           "\nInitial password: the same admission number.\nThe student must change it at first login.");
       } else {
-        alert("Saved.");
+        alert(result && result.message ? result.message : "Saved.");
       }
     } catch (err) {
       alert("Could not save: " + (err.message || err));
@@ -305,32 +305,61 @@
 
   wrap("renderFeesPage", async () => {
     if (!isAdmin()) return "";
-    setTimeout(() => {
-      attach("feeInvoiceForm", async d => check(await sb.from("fee_invoices").insert({
-        student_id: d.student_id, term: d.term.trim(), amount_due: Number(d.amount)
-      })));
-      attach("feePaymentForm", async d => check(await sb.from("fee_payments").insert({
-        student_id: d.student_id, amount: Number(d.amount), method: d.method.trim() || null,
-        reference: d.reference.trim() || null, recorded_by: currentUser.id
-      })));
+    const { classRows } = await lookups();
+    const invoiceOptions = feeInvoices.map(inv => {
+      const student = students.find(s => s.id === inv.student_id);
+      return { id: inv.id, name: inv.invoice_no + " - " + (student ? student.admission + " " + student.name : "Student") + " - " + inv.term + " " + inv.academic_year + " (" + money(inv.amount) + ")" };
     });
-    const list = studentOptions();
+    setTimeout(() => {
+      attach("feeScheduleForm", async d => {
+        const {data: plan, error} = await sb.from("fee_schedules").insert({
+          class_id:d.class_id, term:d.term.trim(), academic_year:Number(d.academic_year),
+          title:d.title.trim()||"School fees", amount:Number(d.amount),
+          due_date:d.due_date, created_by:currentUser.id
+        }).select("id").single();
+        if(error)throw error;
+        const generated=await sb.rpc("generate_class_fee_invoices",{p_schedule_id:plan.id});
+        if(generated.error)throw generated.error;
+        return {message:"Fee plan saved. "+generated.data+" student invoice(s) generated. You can safely retry invoice generation if needed."};
+      });
+      attach("feePaymentForm", async d => {
+        const invoice=feeInvoices.find(x=>x.id===d.invoice_id);
+        if(!invoice)throw new Error("Select a valid student invoice.");
+        const alreadyPaid=feePayments.filter(p=>p.invoiceId===invoice.id).reduce((n,p)=>n+p.amount,0);
+        const remaining=Math.max(0,invoice.amount-alreadyPaid);
+        const amount=Number(d.amount);
+        if(!Number.isFinite(amount)||amount<=0)throw new Error("Enter a valid payment amount.");
+        if(amount>remaining)throw new Error("This payment is greater than the remaining invoice balance of "+money(remaining)+".");
+        const result=await sb.from("fee_payments").insert({
+          invoice_id:invoice.id, student_id:invoice.student_id, term:invoice.term,
+          academic_year:invoice.academic_year, amount, method:d.method,
+          reference:d.reference.trim()||null, recorded_by:currentUser.id
+        });
+        check(result);
+        return {message:"Payment recorded. A unique receipt number has been generated. Open Payment receipts to print it."};
+      });
+    });
     return `
-      <form id="feeInvoiceForm" class="entry-form">
-        <h3>Set fees due</h3>
-        <select name="student_id" required>${opts(list, "id", "name", "Select student")}</select>
+      <form id="feeScheduleForm" class="entry-form">
+        <h3>Automate class fee billing</h3>
+        <p>Create one fee plan and automatically generate an invoice for every student in the selected class. Re-running generation will not create duplicate invoices.</p>
+        <input name="title" placeholder="Fee description (e.g. Term 1 school fees)">
+        <select name="class_id" required>${opts(classRows,"id","name","Select class")}</select>
         <input name="term" placeholder="Term (e.g. Term 1)" required>
-        <input name="amount" type="number" min="0" step="0.01" placeholder="Amount due (KES)" required>
-        <button type="submit">Save fees due</button>
+        <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year" required>
+        <input name="amount" type="number" min="1" step="0.01" placeholder="Amount per student (KES)" required>
+        <label>Payment due date<input name="due_date" type="date" required></label>
+        <button type="submit">Create plan & generate invoices</button>
       </form>
       <form id="feePaymentForm" class="entry-form">
-        <h3>Record payment</h3>
-        <select name="student_id" required>${opts(list, "id", "name", "Select student")}</select>
-        <input name="amount" type="number" min="1" step="0.01" placeholder="Amount paid (KES)" required>
-        <input name="method" placeholder="Method (M-Pesa, bank, cash)">
-        <input name="reference" placeholder="Reference code (optional)">
-        <button type="submit">Record payment</button>
-      </form>`;
+        <h3>Record payment & issue receipt</h3>
+        <select name="invoice_id" required>${opts(invoiceOptions,"id","name","Select student invoice")}</select>
+        <input name="amount" type="number" min="1" step="0.01" placeholder="Amount received (KES)" required>
+        <select name="method" required><option value="">Payment method</option><option value="M-Pesa">M-Pesa</option><option value="Bank">Bank</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option><option value="Other">Other</option></select>
+        <input name="reference" placeholder="M-Pesa / bank transaction reference (optional)">
+        <button type="submit">Record payment & create receipt</button>
+      </form>
+      <div class="entry-form"><h3>Existing fee plans</h3>${feeSchedules.map(x=>`<p><strong>${esc(x.title)}</strong> - ${esc(x.classes?.name||"Class")} - ${esc(x.term)} ${esc(x.academic_year)} - ${money(x.amount)} per student - Due ${esc(x.due_date)}</p>`).join("")||"<p>No fee plans created yet.</p>"}</div>`;
   });
 
   wrap("renderResultsPage", async () => {
