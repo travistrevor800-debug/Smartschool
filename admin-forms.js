@@ -326,18 +326,33 @@
   });
 
   wrap("renderAnnouncementsPage", async () => {
-    if (!isAdmin()) return "";
-    setTimeout(() => {
-      attach("announcementForm", async d => check(await sb.from("announcements").insert({
-        title: d.title.trim(), body: d.body.trim(), created_by: currentUser.id
-      })));
-    });
+    if (!isStaff()) return "";
+    setTimeout(() => attach("announcementForm", async d => {
+      const audiences = {
+        everyone:["admin","teacher","class_teacher","parent","student"],
+        students_parents:["student","parent"], students:["student"], parents:["parent"],
+        teachers:["teacher","class_teacher"], staff:["admin","teacher","class_teacher"]
+      };
+      const audience=audiences[d.audience]; if(!audience)throw new Error("Choose a valid audience.");
+      const {error}=await sb.from("announcements").insert({
+        title:d.title.trim(),body:d.body.trim(),audience,created_by:currentUser.id
+      }); if(error)throw error;
+    }));
     return `
       <form id="announcementForm" class="entry-form">
-        <h3>Post announcement</h3>
-        <input name="title" placeholder="Title" required>
-        <input name="body" placeholder="Message" required>
-        <button type="submit">Post</button>
+        <h3>Write and publish an announcement</h3>
+        <input name="title" maxlength="160" placeholder="Announcement title" required>
+        <textarea name="body" rows="5" maxlength="10000" placeholder="Write the full announcement..." required></textarea>
+        <label for="announcementAudience">Share with</label>
+        <select id="announcementAudience" name="audience" required>
+          <option value="everyone">Everyone in the school</option>
+          <option value="students_parents">Students and parents</option>
+          <option value="students">Students only</option>
+          <option value="parents">Parents only</option>
+          <option value="teachers">Teachers only</option>
+          <option value="staff">All staff</option>
+        </select>
+        <button type="submit">Publish announcement</button>
       </form>`;
   });
 
