@@ -106,7 +106,7 @@ async function loadSchoolData(role) {
     admission: r.students?.admission_no || "", student: r.students?.full_name || "Student",
     className: r.students?.classes?.name || "Class", grade: r.students?.classes?.grade || null, stream: r.students?.classes?.stream || "",
     subject: r.subjects?.name || "Subject", term: r.term || "", year: r.academic_year || "",
-    assessmentType: r.assessment_type || "exam", marks: Number(r.score), grade: letterGrade(Number(r.score))
+    assessmentType: r.assessment_type || "exam", teacherComment: r.teacher_comment || "", marks: Number(r.score), grade: letterGrade(Number(r.score))
   }));
   studentDocuments = docs.data || [];
   reportCardComments = comments.data || [];
