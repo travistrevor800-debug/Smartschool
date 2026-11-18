@@ -73,7 +73,7 @@ async function loadSchoolData(role) {
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
     sb.from("results").select("score, term, academic_year, assessment_type, students(admission_no, full_name), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
-    sb.from("announcements").select("title, body, created_at").order("created_at", { ascending: false }),
+    sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
     sb.from("fee_payments").select("amount, method, reference, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
     sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
@@ -115,11 +115,10 @@ async function loadSchoolData(role) {
     dueDate: x.due_at ? x.due_at.split("T")[0] : ""
   }));
 
-  announcements = ann.data.map(x => ({
-    title: x.title,
-    message: x.body,
-    author: "School Administration",
-    date: x.created_at.split("T")[0]
+  announcements = (ann.data || []).map(x => ({
+    id: x.id, title: x.title, message: x.body, audience: x.audience || [],
+    createdBy: x.created_by || "", author: x.created_by === currentUser?.id ? "You" : "School staff",
+    date: x.created_at ? x.created_at.split("T")[0] : ""
   }));
 
   const balances = new Map(bal.data.map(b => [b.student_id, b]));
@@ -1302,56 +1301,50 @@ function renderAssignmentsPage() {
    ANNOUNCEMENTS
    ========================================================= */
 
-function renderAnnouncementsPage() {
-
-  if (!hasPermission("announcements")) {
-
-    showAccessDenied();
-
-    return;
-
-  }
-
-
-  contentPage.innerHTML = `
-
-    <div class="page-header">
-
-      <div>
-        <h2>Announcements</h2>
-        <p>Important school announcements.</p>
-      </div>
-
-    </div>
-
-    ${announcements.map(announcement => `
-
-      <div class="panel">
-
-        <h3>
-          📢 ${escapeHTML(announcement.title)}
-        </h3>
-
-        <p>
-          ${escapeHTML(announcement.message)}
-        </p>
-
-        <small>
-          ${escapeHTML(announcement.author)}
-          ·
-          ${escapeHTML(announcement.date)}
-        </small>
-
-      </div>
-
-    `).join("")}
-  `;
+function announcementAudienceLabel(audience) {
+  const roles=audience||[];
+  if(["admin","teacher","class_teacher","parent","student"].every(r=>roles.includes(r))) return "Everyone";
+  if(roles.includes("student")&&roles.includes("parent")&&roles.length===2)return "Students & parents";
+  if(roles.length===1&&roles[0]==="student")return "Students";
+  if(roles.length===1&&roles[0]==="parent")return "Parents";
+  if(roles.includes("teacher")||roles.includes("class_teacher"))return "Teachers / staff";
+  return roles.map(r=>r.replace("_"," ")).join(", ")||"School community";
 }
-
-
-/* =========================================================
-   FEES
-   ========================================================= */
+async function shareAnnouncement(id) {
+  const item=announcements.find(a=>a.id===id); if(!item)return alert("Announcement not found. Refresh and try again.");
+  const text=item.title+"\\n\\n"+item.message+"\\n\\nKirimunge Senior School";
+  try {
+    if(navigator.share) await navigator.share({title:item.title,text,url:window.location.href});
+    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text+"\\n"+window.location.href);alert("Announcement copied. Paste it into WhatsApp or another app to share.");}
+    else window.prompt("Copy this announcement to share:",text+"\\n"+window.location.href);
+  } catch(err){if(err.name!=="AbortError")alert("Sharing was not completed. Please copy the announcement text manually.");}
+}
+window.shareAnnouncement=shareAnnouncement;
+function renderAnnouncementsPage() {
+  if(!hasPermission("announcements"))return showAccessDenied();
+  const staff=currentUser&&["admin","teacher"].includes(currentUser.role);
+  contentPage.innerHTML=`
+    <div class="page-header"><div><h2>School Announcements</h2><p>Official notices and updates from Kirimunge Senior School.</p></div></div>
+    <div class="announcement-feed">
+    ${announcements.map(a=>`<article class="panel announcement-card"><div class="announcement-card-heading"><div><h3>📢 ${escapeHTML(a.title)}</h3><small>${escapeHTML(a.author)} · ${escapeHTML(a.date)} · For: ${escapeHTML(announcementAudienceLabel(a.audience))}</small></div></div><p class="announcement-message">${escapeHTML(a.message)}</p><div class="announcement-actions"><button type="button" onclick="shareAnnouncement('${escapeHTML(a.id)}')">↗ Share</button>${staff&&(currentUser.role==="admin"||a.createdBy===currentUser.id)?`<button type="button" data-edit-announcement="${escapeHTML(a.id)}">Edit</button><button type="button" class="danger-button" data-delete-announcement="${escapeHTML(a.id)}">Delete</button>`:""}</div></article>`).join("")||'<div class="panel"><h3>No announcements yet</h3><p>New school announcements will appear here.</p></div>'}
+    </div>`;
+  contentPage.querySelectorAll("[data-edit-announcement]").forEach(button=>button.addEventListener("click",async()=>{
+    const item=announcements.find(a=>a.id===button.dataset.editAnnouncement);if(!item)return;
+    const title=prompt("Edit announcement title:",item.title);if(title===null)return;
+    const message=prompt("Edit announcement message:",item.message);if(message===null)return;
+    if(!title.trim()||!message.trim())return alert("Title and message cannot be empty.");
+    button.disabled=true;const {error}=await sb.from("announcements").update({title:title.trim(),body:message.trim()}).eq("id",item.id);
+    if(error){alert("Could not update announcement: "+error.message);button.disabled=false;return;}
+    await loadSchoolData(currentUser.role);showPage("announcements");alert("Announcement updated.");
+  }));
+  contentPage.querySelectorAll("[data-delete-announcement]").forEach(button=>button.addEventListener("click",async()=>{
+    const item=announcements.find(a=>a.id===button.dataset.deleteAnnouncement);if(!item)return;
+    if(!confirm("Delete this announcement? This cannot be undone."))return;
+    button.disabled=true;const {error}=await sb.from("announcements").delete().eq("id",item.id);
+    if(error){alert("Could not delete announcement: "+error.message);button.disabled=false;return;}
+    await loadSchoolData(currentUser.role);showPage("announcements");alert("Announcement deleted.");
+  }));
+}
 
 function renderFeesPage(searchTerm = "") {
 
