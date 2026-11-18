@@ -158,7 +158,7 @@
           window.open(signed.data.signedUrl,"_blank","noopener");
         }));
       };
-      filter?.addEventListener("change",drawDocs);drawDocs();
+      filter?.addEventListener("change",()=>{const hidden=docForm?.querySelector('input[name="student_id"]');if(hidden)hidden.value=filter.value;drawDocs();});drawDocs();
     });
 
     const adminForms=isAdmin()?(
@@ -338,8 +338,18 @@
     setTimeout(() => {
       attach("resultForm", async d => check(await sb.from("results").upsert({
         student_id: d.student_id, subject_id: d.subject_id, term: d.term.trim(),
+        academic_year: Number(d.academic_year), assessment_type: d.assessment_type,
         score: Number(d.score), recorded_by: currentUser.id
       }, { onConflict: "student_id,subject_id,term,academic_year,assessment_type" })));
+      attach("reportCommentsForm", async d => check(await sb.from("report_card_comments").upsert({
+        student_id:d.student_id,term:d.term.trim(),academic_year:Number(d.academic_year),
+        class_teacher_comment:d.class_teacher_comment.trim()||null,
+        principal_comment:d.principal_comment.trim()||null,
+        class_teacher_name:d.class_teacher_name.trim()||null,
+        principal_name:d.principal_name.trim()||null,
+        closing_date:d.closing_date||null,reopening_date:d.reopening_date||null,
+        updated_by:currentUser.id
+      },{onConflict:"student_id,term,academic_year"})));
     });
     return `
       <form id="resultForm" class="entry-form">
@@ -347,8 +357,23 @@
         <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select student")}</select>
         <select name="subject_id" required>${opts(subjectRows, "id", "name", "Select subject")}</select>
         <input name="term" placeholder="Term (e.g. Term 1)" required>
+        <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year (e.g. 2026)" required>
+        <select name="assessment_type" required><option value="exam">Exam</option><option value="cat">CAT</option><option value="assessment">Assessment</option></select>
         <input name="score" type="number" min="0" max="100" step="0.01" placeholder="Score (0-100)" required>
         <button type="submit">Save result</button>
+      </form>
+      <form id="reportCommentsForm" class="entry-form">
+        <h3>Report card remarks and school dates</h3>
+        <select name="student_id" required>${opts(studentOptions(),"id","name","Select student")}</select>
+        <input name="term" placeholder="Term (e.g. Term 1)" required>
+        <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year" required>
+        <input name="class_teacher_name" placeholder="Class teacher name">
+        <textarea name="class_teacher_comment" rows="3" placeholder="Class teacher remark"></textarea>
+        <input name="principal_name" placeholder="Principal name">
+        <textarea name="principal_comment" rows="3" placeholder="Principal remark"></textarea>
+        <label>Closing date<input name="closing_date" type="date"></label>
+        <label>Reopening date<input name="reopening_date" type="date"></label>
+        <button type="submit">Save report card remarks</button>
       </form>`;
   });
 
