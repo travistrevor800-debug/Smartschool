@@ -18,6 +18,12 @@ function studentEmail(admissionNo: string) {
   const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
   return `student.${hex}@login.smartschool.invalid`;
 }
+function parentEmail(admissionNo: string) {
+  const normalized = admissionNo.trim().toLowerCase();
+  const bytes = new TextEncoder().encode(normalized);
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+  return `parent.${hex}@login.smartschool.invalid`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -55,7 +61,7 @@ Deno.serve(async (req) => {
     let fullName = fullNameInput;
     let linkedStudent: { id: string; admission_no: string; full_name: string; profile_id: string | null } | null = null;
 
-    if (role === "student") {
+    if (role === "student" || role === "parent") {
       const { data: student, error: studentError } = await admin
         .from("students")
         .select("id, admission_no, full_name, profile_id")
@@ -69,11 +75,17 @@ Deno.serve(async (req) => {
         return json({ error: "Admission number must be at least 6 characters to be used as the initial password." }, 400);
 
       linkedStudent = student;
-      email = studentEmail(admissionNo);
-      password = admissionNo;
-      fullName = student.full_name;
+      if (role === "student") {
+        email = studentEmail(admissionNo);
+        password = admissionNo;
+        fullName = student.full_name;
+      } else {
+        email = parentEmail(admissionNo);
+        password = admissionNo;
+        if (!fullName) return json({ error: "Parent or guardian full name is required" }, 400);
+      }
     } else {
-      if (!email || !password) return json({ error: "Email and password are required for staff and parent accounts" }, 400);
+      if (!email || !password) return json({ error: "Email and password are required for staff accounts" }, 400);
       if (password.length < 8) return json({ error: "Password must be at least 8 characters" }, 400);
     }
 
@@ -81,8 +93,8 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      app_metadata: role === "student"
-        ? { must_change_password: true, account_type: "student" }
+      app_metadata: (role === "student" || role === "parent")
+        ? { must_change_password: true, account_type: role }
         : { account_type: role },
       user_metadata: { full_name: fullName },
     });
@@ -126,9 +138,9 @@ Deno.serve(async (req) => {
       ok: true,
       id: uid,
       role,
-      login: role === "student" ? "Use the student's admission number" : email,
-      initial_password: role === "student" ? "The student's admission number" : undefined,
-      must_change_password: role === "student",
+      login: (role === "student" || role === "parent") ? "Use the child's admission number" : email,
+      initial_password: (role === "student" || role === "parent") ? "The child's admission number" : undefined,
+      must_change_password: role === "student" || role === "parent",
     });
   } catch (error) {
     return json({ error: String(error) }, 500);
