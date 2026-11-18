@@ -210,7 +210,7 @@ const rolePermissions = {
 
 };
 
-["student", "teacher", "parent", "admin"].forEach(role => rolePermissions[role].push("lessons", "contests"));
+["student", "teacher", "admin"].forEach(role => rolePermissions[role].push("lessons", "contests"));
 
 /* =========================================================
    PAGE INFORMATION
