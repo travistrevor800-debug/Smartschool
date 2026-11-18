@@ -1228,12 +1228,12 @@ function renderResultsPage() {
   const initialStudentId = visibleStudents[0]?.id || "";
   contentPage.innerHTML = '<div class="page-header results-heading"><div><h2>Academic Report Cards</h2><p>Individual student performance reports, ready to print or save as PDF.</p></div><button class="primary-button" onclick="window.print()">Print / Save PDF</button></div>' +
     '<div class="panel report-controls">' +
-    ((currentUser.role !== "student" && currentUser.role !== "parent") ? '<label>Student<select id="reportStudent">' + visibleStudents.map(s=>'<option value="' + escapeHTML(s.id) + '">' + escapeHTML(s.admission + " - " + s.name) + '</option>').join("") + '</select></label>' : '') +
+    ((currentUser.role !== "student") ? '<label>Student<select id="reportStudent">' + visibleStudents.map(s=>'<option value="' + escapeHTML(s.id) + '">' + escapeHTML(s.admission + " - " + s.name) + '</option>').join("") + '</select></label>' : '') +
     '<label>Term<select id="reportTerm">' + terms.map(t=>'<option value="' + escapeHTML(t) + '">' + escapeHTML(t) + '</option>').join("") + '</select></label>' +
     '<label>Academic year<select id="reportYear">' + years.map(y=>'<option value="' + escapeHTML(y) + '">' + escapeHTML(y) + '</option>').join("") + '</select></label></div><div id="reportCardOutput"></div>';
   const value = id => document.getElementById(id)?.value || "";
   const draw = async () => {
-    const studentId = (currentUser.role === "student" || currentUser.role === "parent") ? initialStudentId : value("reportStudent");
+    const studentId = currentUser.role === "student" ? initialStudentId : value("reportStudent");
     const term=value("reportTerm"), year=value("reportYear"), student=students.find(s=>s.id===studentId);
     const rows=results.filter(r=>r.studentId===studentId && r.term===term && String(r.year)===year);
     const classRows=results.filter(r=>r.classId===student?.classId && r.term===term && String(r.year)===year);
