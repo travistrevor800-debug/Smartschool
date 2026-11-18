@@ -340,7 +340,7 @@
       attach("resultForm", async d => check(await sb.from("results").upsert({
         student_id: d.student_id, subject_id: d.subject_id, term: d.term.trim(),
         academic_year: Number(d.academic_year), assessment_type: d.assessment_type,
-        score: Number(d.score), recorded_by: currentUser.id
+        teacher_comment: d.teacher_comment.trim()||null, score: Number(d.score), recorded_by: currentUser.id
       }, { onConflict: "student_id,subject_id,term,academic_year,assessment_type" })));
       attach("reportCommentsForm", async d => check(await sb.from("report_card_comments").upsert({
         student_id:d.student_id,term:d.term.trim(),academic_year:Number(d.academic_year),
@@ -361,6 +361,7 @@
         <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year (e.g. 2026)" required>
         <select name="assessment_type" required><option value="exam">Exam</option><option value="cat">CAT</option><option value="assessment">Assessment</option></select>
         <input name="score" type="number" min="0" max="100" step="0.01" placeholder="Score (0-100)" required>
+        <textarea name="teacher_comment" rows="2" maxlength="500" placeholder="Teacher comment for this subject (optional)"></textarea>
         <button type="submit">Save result</button>
       </form>
       <form id="reportCommentsForm" class="entry-form">
