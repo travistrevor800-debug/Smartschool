@@ -68,14 +68,16 @@ async function loadSchoolData(role) {
 
   const staff = role === "admin" || role === "teacher";
 
-  const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments] = await Promise.all([
+  const [stu, cls, res, asg, ann, bal, pay, invoices, schedules, att, tch, les, materials, contests, docs, comments] = await Promise.all([
     sb.from("students").select("id, admission_no, full_name, class_id, classes(name, grade, stream)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
     sb.from("results").select("score, term, academic_year, assessment_type, teacher_comment, student_id, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
-    sb.from("fee_payments").select("amount, method, reference, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
+    sb.from("fee_payments").select("id, amount, method, reference, receipt_no, invoice_id, term, academic_year, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
+    sb.from("fee_invoices").select("id, student_id, term, academic_year, amount_due, due_date, invoice_no, created_at").order("created_at", { ascending: false }),
+    sb.from("fee_schedules").select("id, class_id, term, academic_year, title, amount, due_date, is_active, classes(name)").order("created_at", { ascending: false }),
     sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
     staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
     sb.from("lessons").select("id, title, video_url, scheduled_at, classes(name), subjects(name)").order("scheduled_at"),
@@ -84,7 +86,7 @@ async function loadSchoolData(role) {
     sb.from("student_documents").select("id, student_id, document_type, object_path, file_name, mime_type, file_size, created_at").order("created_at", { ascending: false }),
     sb.from("report_card_comments").select("id, student_id, term, academic_year, class_teacher_comment, principal_comment, closing_date, reopening_date, class_teacher_name, principal_name")
   ]);
-  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments].find(r => r.error);
+  const failed = [stu, cls, res, asg, ann, bal, pay, invoices, schedules, att, tch, les, materials, contests, docs, comments].find(r => r.error);
   if (failed) {
     throw new Error(failed.error.message);
   }
@@ -140,8 +142,10 @@ async function loadSchoolData(role) {
       paid: Number(balances.get(s.id).total_paid)
     }));
 
+  feeInvoices = (invoices.data || []).map(i => ({...i, amount: Number(i.amount_due)}));
+  feeSchedules = schedules.data || [];
   feePayments = pay.data.map((p, i) => ({
-    id: "P" + String(i + 1).padStart(3, "0"),
+    id: p.id, receiptNo: p.receipt_no || "Receipt", invoiceId: p.invoice_id || "", term: p.term || "", year: p.academic_year || "",
     admission: p.students.admission_no,
     student: p.students.full_name,
     amount: Number(p.amount),
@@ -315,6 +319,8 @@ let fees = [];
 
 
 let feePayments = [];
+let feeInvoices = [];
+let feeSchedules = [];
 
 
 let notifications = [];
@@ -1579,8 +1585,34 @@ function renderFeesPage(searchTerm = "") {
 
     </div>
   `;
+
+  const invoicePanel = document.createElement("div");
+  invoicePanel.className = "panel";
+  invoicePanel.innerHTML = "<h3>Fee invoices</h3>" + (feeInvoices.length ? feeInvoices.map(inv => {
+    const paid = feePayments.filter(p => p.invoiceId === inv.id).reduce((n,p)=>n+p.amount,0);
+    const balance = Math.max(0, Number(inv.amount)-paid);
+    const overdue = balance>0 && inv.due_date && inv.due_date < new Date().toISOString().slice(0,10);
+    return "<p><strong>"+escapeHTML(inv.invoice_no)+"</strong> · "+escapeHTML(inv.term)+" "+escapeHTML(inv.academic_year)+" · "+money(inv.amount)+" · Balance "+money(balance)+" · Due "+escapeHTML(inv.due_date||"-")+" · "+(overdue?"OVERDUE":balance===0?"PAID":"PENDING")+"</p>";
+  }).join("") : "<p>No invoices issued yet.</p>");
+  contentPage.appendChild(invoicePanel);
+
+  const paymentPanel = document.createElement("div");
+  paymentPanel.className = "panel";
+  paymentPanel.innerHTML = "<h3>Payment receipts</h3>" + (feePayments.length ? feePayments.map(p => "<p>"+escapeHTML(p.receiptNo)+" · "+escapeHTML(p.date)+" · "+money(p.amount)+" · "+escapeHTML(p.method||"-")+" <button type='button' onclick=\"printFeeReceipt('"+escapeHTML(p.id)+"')\">Print receipt</button></p>").join("") : "<p>No payments recorded yet.</p>");
+  contentPage.appendChild(paymentPanel);
+
 }
 
+
+
+function printFeeReceipt(paymentId) {
+  const p = feePayments.find(x => x.id === paymentId);
+  if (!p) { alert("Receipt not found."); return; }
+  const w = window.open("", "_blank", "width=700,height=800");
+  if (!w) { alert("Allow pop-ups to print the receipt."); return; }
+  w.document.write("<html><head><title>"+escapeHTML(p.receiptNo)+"</title><style>body{font-family:Arial;padding:30px}h1{text-align:center}table{width:100%;border-collapse:collapse}td{padding:12px;border-bottom:1px solid #ddd}</style></head><body><h1>Kirimunge Senior School</h1><h2>OFFICIAL FEE RECEIPT</h2><p>Receipt: "+escapeHTML(p.receiptNo)+"</p><table><tr><td>Student</td><td>"+escapeHTML(p.student)+"</td></tr><tr><td>Admission</td><td>"+escapeHTML(p.admission)+"</td></tr><tr><td>Date</td><td>"+escapeHTML(p.date)+"</td></tr><tr><td>Amount</td><td>"+money(p.amount)+"</td></tr><tr><td>Method</td><td>"+escapeHTML(p.method||"-")+"</td></tr><tr><td>Reference</td><td>"+escapeHTML(p.reference||"-")+"</td></tr></table><script>window.onload=()=>window.print()<\\/script></body></html>");
+  w.document.close();
+}
 
 /* =========================================================
    NOTIFICATIONS
