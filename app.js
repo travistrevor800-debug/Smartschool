@@ -68,21 +68,21 @@ async function loadSchoolData(role) {
 
   const staff = role === "admin" || role === "teacher";
 
-  const [stu, cls, res, asg, ann, bal, pay, att, tch] = await Promise.all([
+  const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests] = await Promise.all([
     sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
-    sb.from("results").select("score, students(admission_no, full_name), subjects(name)"),
+    sb.from("results").select("score, term, academic_year, assessment_type, students(admission_no, full_name), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("title, body, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
     sb.from("fee_payments").select("amount, method, reference, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
     sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
-    staff
-      ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"])
-      : Promise.resolve({ data: [] })
+    staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
+    sb.from("lessons").select("id, title, video_url, scheduled_at, classes(name), subjects(name)").order("scheduled_at"),
+    sb.from("revision_materials").select("id, title, file_url, content, classes(name), subjects(name)").order("created_at", { ascending: false }),
+    sb.from("assessments").select("id, title, kind, starts_at, duration_minutes, is_published, classes(name), subjects(name)").eq("kind", "contest").order("starts_at")
   ]);
-
-  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch].find(r => r.error);
+  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests].find(r => r.error);
   if (failed) {
     throw new Error(failed.error.message);
   }
@@ -99,13 +99,14 @@ async function loadSchoolData(role) {
   classRecords = cls.data || [];
   classes = classRecords.map(c => c.name);
 
-  results = res.data.map(r => ({
-    admission: r.students.admission_no,
-    student: r.students.full_name,
-    subject: r.subjects.name,
-    marks: Number(r.score),
-    grade: letterGrade(Number(r.score))
+  results = (res.data || []).map(r => ({
+    admission: r.students?.admission_no || "", student: r.students?.full_name || "Student",
+    subject: r.subjects?.name || "Subject", term: r.term || "", year: r.academic_year || "",
+    assessmentType: r.assessment_type || "exam", marks: Number(r.score), grade: letterGrade(Number(r.score))
   }));
+  lessons = (les.data || []).map(r => ({id:r.id,title:r.title,videoUrl:r.video_url||"",scheduledAt:r.scheduled_at||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
+  revisionMaterials = (materials.data || []).map(r => ({id:r.id,title:r.title,fileUrl:r.file_url||"",content:r.content||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
+  competitions = (contests.data || []).map(r => ({id:r.id,title:r.title,startsAt:r.starts_at,duration:r.duration_minutes,published:!!r.is_published,className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
 
   assignments = asg.data.map(x => ({
     title: x.title,
@@ -209,6 +210,7 @@ const rolePermissions = {
 
 };
 
+["student", "teacher", "admin"].forEach(role => rolePermissions[role].push("lessons", "contests"));
 
 /* =========================================================
    PAGE INFORMATION
@@ -243,8 +245,11 @@ const pageInfo = {
 
   results: {
     title: "Results",
-    description: "Academic results."
+    description: "Term reports and academic performance."
   },
+
+  lessons: { title: "Lessons", description: "Class lessons and learning materials." },
+  contests: { title: "Competitions & Challenges", description: "Academic competitions and student challenges." },
 
   assignments: {
     title: "Assignments",
@@ -287,7 +292,9 @@ let attendanceRecords = [];
 
 
 let results = [];
-
+let lessons = [];
+let revisionMaterials = [];
+let competitions = [];
 
 let assignments = [];
 
@@ -790,6 +797,8 @@ function showPage(page) {
     case "results":
       renderResultsPage();
       break;
+    case "lessons": renderLessonsPage(); break;
+    case "contests": renderContestsPage(); break;
 
     case "assignments":
       renderAssignmentsPage();
@@ -1205,75 +1214,29 @@ async function setAttendance(admission, status) {
    ========================================================= */
 
 function renderResultsPage() {
-
-  if (!hasPermission("results")) {
-
-    showAccessDenied();
-
-    return;
-
-  }
-
-
-  contentPage.innerHTML = `
-
-    <div class="page-header">
-
-      <div>
-        <h2>Results</h2>
-        <p>Academic performance records.</p>
-      </div>
-
-    </div>
-
-    <div class="panel">
-
-      <div class="table-wrapper">
-
-        <table>
-
-          <thead>
-
-            <tr>
-              <th>Admission</th>
-              <th>Student</th>
-              <th>Subject</th>
-              <th>Marks</th>
-              <th>Grade</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            ${results.map(result => `
-
-              <tr>
-
-                <td>${escapeHTML(result.admission)}</td>
-
-                <td>${escapeHTML(result.student)}</td>
-
-                <td>${escapeHTML(result.subject)}</td>
-
-                <td>${result.marks}</td>
-
-                <td>${escapeHTML(result.grade)}</td>
-
-              </tr>
-
-            `).join("")}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  `;
+  if (!hasPermission("results")) return showAccessDenied();
+  const avg = results.length ? results.reduce((s,r)=>s+r.marks,0)/results.length : 0;
+  const terms=[...new Set(results.map(r=>r.term).filter(Boolean))], years=[...new Set(results.map(r=>r.year).filter(Boolean))];
+  contentPage.innerHTML=`
+    <div class="page-header results-heading"><div><h2>Academic Results & Report Cards</h2><p>Term results, subject grades and printable performance statements.</p></div><button class="primary-button" onclick="window.print()">Print / Save PDF</button></div>
+    <div class="stats-grid"><div class="stat-card"><div><span>Subject results</span><strong class="stat-value">${results.length}</strong></div></div><div class="stat-card"><div><span>Average</span><strong class="stat-value">${avg.toFixed(1)}%</strong></div></div><div class="stat-card"><div><span>Academic years</span><strong class="stat-value">${years.length}</strong></div></div></div>
+    <div class="panel"><div class="panel-header"><div><h3>Performance statement</h3><p>Records shown according to your school permissions.</p></div></div>
+    <div class="results-filters"><label>Term<select id="resultTermFilter"><option value="">All terms</option>${terms.map(t=>`<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join("")}</select></label><label>Year<select id="resultYearFilter"><option value="">All years</option>${years.map(y=>`<option value="${escapeHTML(y)}">${escapeHTML(y)}</option>`).join("")}</select></label></div>
+    <div class="table-wrapper"><table class="results-table"><thead><tr><th>Admission No.</th><th>Student</th><th>Subject</th><th>Term</th><th>Year</th><th>Assessment</th><th>Marks</th><th>Grade</th></tr></thead><tbody id="resultsTableBody">${results.map(r=>`<tr data-term="${escapeHTML(r.term)}" data-year="${escapeHTML(r.year)}"><td>${escapeHTML(r.admission)}</td><td>${escapeHTML(r.student)}</td><td>${escapeHTML(r.subject)}</td><td>${escapeHTML(r.term)}</td><td>${escapeHTML(r.year)}</td><td>${escapeHTML(r.assessmentType)}</td><td>${r.marks.toFixed(1)}%</td><td><strong>${escapeHTML(r.grade)}</strong></td></tr>`).join("")||'<tr><td colspan="8">No results have been published yet.</td></tr>'}</tbody></table></div></div>`;
+  const filter=()=>{const t=document.getElementById("resultTermFilter").value,y=document.getElementById("resultYearFilter").value;document.querySelectorAll("#resultsTableBody tr[data-term]").forEach(row=>row.hidden=(t&&row.dataset.term!==t)||(y&&row.dataset.year!==y));};
+  document.getElementById("resultTermFilter").addEventListener("change",filter);document.getElementById("resultYearFilter").addEventListener("change",filter);
 }
 
+function renderLessonsPage() {
+  if(!hasPermission("lessons")) return showAccessDenied();
+  contentPage.innerHTML=`<div class="page-header"><div><h2>Lessons & Learning Centre</h2><p>Class lessons, notes and revision resources.</p></div></div>
+  <div class="panel"><h3>My class lessons</h3><div class="learning-grid">${lessons.map(l=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(l.subject)}</span><h3>${escapeHTML(l.title)}</h3><p><b>Class:</b> ${escapeHTML(l.className)}</p><p><b>Schedule:</b> ${l.scheduledAt?escapeHTML(new Date(l.scheduledAt).toLocaleString()):"Not scheduled"}</p>${l.videoUrl?`<a href="${escapeHTML(l.videoUrl)}" target="_blank" rel="noopener noreferrer">Open lesson video</a>`:"No video attached"}</article>`).join("")||"<p>No lessons available yet.</p>"}</div></div>
+  <div class="panel"><h3>Notes & revision materials</h3><div class="learning-grid">${revisionMaterials.map(m=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(m.subject)}</span><h3>${escapeHTML(m.title)}</h3><p><b>Class:</b> ${escapeHTML(m.className)}</p>${m.content?`<p>${escapeHTML(m.content)}</p>`:""}${m.fileUrl?`<a href="${escapeHTML(m.fileUrl)}" target="_blank" rel="noopener noreferrer">Open / download resource</a>`:""}</article>`).join("")||"<p>No revision materials available yet.</p>"}</div></div>`;
+}
+function renderContestsPage() {
+  if(!hasPermission("contests")) return showAccessDenied();
+  contentPage.innerHTML=`<div class="page-header"><div><h2>Academic Competitions & Challenges</h2><p>Subject challenges and school-wide academic competitions.</p></div></div><div class="learning-grid">${competitions.map(c=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(c.subject)}</span><h3>🏆 ${escapeHTML(c.title)}</h3><p><b>Class:</b> ${escapeHTML(c.className)}</p><p><b>Starts:</b> ${c.startsAt?escapeHTML(new Date(c.startsAt).toLocaleString()):"To be announced"}</p><p><b>Duration:</b> ${c.duration} minutes</p><span class="status-pill ${c.published?"status-live":"status-draft"}">${c.published?"Published":"Coming soon"}</span></article>`).join("")||'<div class="panel"><h3>No competitions yet</h3><p>New challenges will appear here when published.</p></div>'}</div>`;
+}
 
 /* =========================================================
    ASSIGNMENTS
