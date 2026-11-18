@@ -66,8 +66,9 @@
       await loadSchoolData(currentUser.role);
       showPage(document.querySelector("[data-page].active").dataset.page);
       if (result && (result.studentAdmission || result.parentAdmission)) {
+        const initialPassword = result.parentTemporaryPassword || result.studentAdmission;
         alert((result.parentAdmission ? "Parent login created." : "Student login created.") + "\nLogin ID: " + (result.parentAdmission || result.studentAdmission) +
-          "\nInitial password: the same admission number.\nThe user must change it at first login.");
+          "\nTemporary password: " + initialPassword + "\nThe user must change it at first login. Save this password now; it is shown only once.");
       } else {
         alert(result && result.message ? result.message : "Saved.");
       }
@@ -133,7 +134,7 @@
           const child = students.find(s => s.id === d.student_id);
           if (!child) throw new Error("Select the child first.");
           const result = await createAccount({ role: "parent", student_id: d.student_id, full_name: d.name.trim() });
-          return { ...result, parentAdmission: child.admission };
+          return { ...result, parentAdmission: child.admission, parentTemporaryPassword: result.initial_password };
         });
       }
 
