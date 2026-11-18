@@ -137,7 +137,7 @@
           if(!doc) throw new Error("Document record not found. Refresh and try again.");
           const signed=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
           if(signed.error) throw signed.error;
-          window.open(signed.data.signedUrl,"_blank","noopener");
+          const link=document.createElement("a");link.href=signed.data.signedUrl;link.download=doc.file_name;link.rel="noopener";document.body.appendChild(link);link.click();link.remove();
         } catch(err){alert("Could not download document: "+(err.message||err));}
         finally{button.disabled=false;}
       }));
