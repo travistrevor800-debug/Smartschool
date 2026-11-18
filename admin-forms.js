@@ -56,9 +56,9 @@
       const result = await work(Object.fromEntries(new FormData(form)));
       await loadSchoolData(currentUser.role);
       showPage(document.querySelector("[data-page].active").dataset.page);
-      if (result && result.studentAdmission) {
-        alert("Student login created.\nLogin ID: " + result.studentAdmission +
-          "\nInitial password: the same admission number.\nThe student must change it at first login.");
+      if (result && (result.studentAdmission || result.parentAdmission)) {
+        alert((result.parentAdmission ? "Parent login created." : "Student login created.") + "\nLogin ID: " + (result.parentAdmission || result.studentAdmission) +
+          "\nInitial password: the same admission number.\nThe user must change it at first login.");
       } else {
         alert(result && result.message ? result.message : "Saved.");
       }
@@ -120,7 +120,12 @@
           const result = await createAccount({ role: "student", student_id: d.student_id });
           return { ...result, studentAdmission: student.admission };
         });
-        attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
+        attach("parentLoginForm", async d => {
+          const child = students.find(s => s.id === d.student_id);
+          if (!child) throw new Error("Select the child first.");
+          const result = await createAccount({ role: "parent", student_id: d.student_id, full_name: d.name.trim() });
+          return { ...result, parentAdmission: child.admission };
+        });
       }
 
       const docForm=document.getElementById("studentDocumentForm");
@@ -184,7 +189,7 @@
     const adminForms=isAdmin()?(
       '<form id="addStudentForm" class="entry-form"><h3>Register student</h3><input name="admission" placeholder="Admission number" required><input name="name" placeholder="Full name" required><select name="class_id" required>'+opts(classRows,"id","name","Select class")+'</select><button type="submit">Add student</button></form>'+
       '<form id="studentLoginForm" class="entry-form"><h3>Create student login</h3><p>The student uses their admission number as the login ID and temporary password, then changes it at first login.</p><select name="student_id" required>'+opts(studentList,"id","name","Select student")+'</select><button type="submit">Create student login</button></form>'+
-      '<form id="parentLoginForm" class="entry-form"><h3>Create parent login</h3><select name="student_id" required>'+opts(studentList,"id","name","Select linked child")+'</select><input name="name" placeholder="Parent or guardian full name" required><input name="email" type="email" placeholder="Parent email address" required><input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required><button type="submit">Create parent login</button></form>'
+      '<form id="parentLoginForm" class="entry-form"><h3>Create parent login</h3><p>Parent login ID and temporary password will both be the selected child\'s admission number. The parent must set a new password at first login.</p><select name="student_id" required>'+opts(studentList,"id","name","Select linked child")+'</select><input name="name" placeholder="Parent or guardian full name" required><button type="submit">Create parent login</button></form>'
     ):"";
     const selected=students[0]?.id||"";
     return adminForms+
