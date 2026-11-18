@@ -203,6 +203,7 @@ const rolePermissions = {
     "assignments",
     "announcements",
     "fees",
+    "documents",
     "notifications"
   ],
 
@@ -827,6 +828,10 @@ function showPage(page) {
       renderFeesPage();
       break;
 
+    case "documents":
+      renderParentDocumentsPage();
+      break;
+
     case "notifications":
       renderNotificationsPage();
       break;
@@ -884,6 +889,15 @@ function updateDashboard() {
    STUDENTS
    ========================================================= */
 
+function renderParentDocumentsPage() {
+  if (!currentUser || currentUser.role !== "parent" || !hasPermission("documents")) return showAccessDenied();
+  const linkedChildren = students;
+  contentPage.innerHTML = '<div class="page-header"><div><h2>My Child Documents</h2><p>Securely view and download documents for children linked to your parent account.</p></div></div><div class="panel">' +
+    (linkedChildren.length ? linkedChildren.map(child => '<div class="parent-child-document-row"><div><strong>' + escapeHTML(child.name) + '</strong><small>Admission: ' + escapeHTML(child.admission) + ' · ' + escapeHTML(child.className) + '</small></div><button type="button" data-parent-view-child="' + escapeHTML(child.id) + '">View documents</button></div>').join("") : '<p>No child is linked to this parent account yet. Please contact the school administrator.</p>') +
+    '</div><div id="studentDocumentViewer" class="student-document-viewer panel" hidden></div>';
+  contentPage.querySelectorAll("[data-parent-view-child]").forEach(button => button.addEventListener("click", () => openStudentDocuments(button.dataset.parentViewChild)));
+}
+
 function renderStudentsPage() {
   if (!hasPermission("students")) { showAccessDenied(); return; }
   contentPage.innerHTML = `
@@ -911,7 +925,8 @@ function renderStudentsPage() {
 }
 
 async function openStudentDocuments(studentId) {
-  if (!hasPermission("students")) { alert("You do not have permission to view student records."); return; }
+  const parentOwnsLinkedChild = currentUser && currentUser.role === "parent" && students.some(st=>st.id===studentId);
+  if (!hasPermission("students") && !parentOwnsLinkedChild) { alert("You do not have permission to view these student records."); return; }
   const student=students.find(st=>st.id===studentId);
   if(!student)return;
   const filter=document.getElementById("studentDocumentStudent");
