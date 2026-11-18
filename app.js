@@ -914,6 +914,8 @@ async function openStudentDocuments(studentId) {
   if (!hasPermission("students")) { alert("You do not have permission to view student records."); return; }
   const student=students.find(st=>st.id===studentId);
   if(!student)return;
+  const filter=document.getElementById("studentDocumentStudent");
+  if(filter){filter.value=studentId;filter.dispatchEvent(new Event("change"));}
   const viewer=document.getElementById("studentDocumentViewer");
   if(!viewer)return;
   const labels={
