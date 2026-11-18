@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await admin.auth.getUser(token);
     const user = authData?.user;
     if (authError || !user) return json({ error: "Not signed in" }, 401);
-    if (user.app_metadata?.must_change_password !== true || user.app_metadata?.account_type !== "student")
+    if (user.app_metadata?.must_change_password !== true || !["student", "parent"].includes(String(user.app_metadata?.account_type || "")))
       return json({ error: "This account is not awaiting its first password change" }, 403);
 
     const { password } = await req.json();
