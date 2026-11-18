@@ -87,50 +87,95 @@
   }
 
   wrap("renderStudentsPage", async () => {
-    if (!isAdmin()) return "";
+    if (!isStaff()) return "";
     const { classRows } = await lookups();
-
+    const studentList = studentOptions();
     setTimeout(() => {
-      attach("addStudentForm", async d => check(await sb.from("students").insert({
-        admission_no: d.admission.trim(),
-        full_name: d.name.trim(),
-        class_id: d.class_id || null
-      })));
+      if (isAdmin()) {
+        attach("addStudentForm", async d => check(await sb.from("students").insert({
+          admission_no: d.admission.trim(), full_name: d.name.trim(), class_id: d.class_id || null
+        })));
+        attach("studentLoginForm", async d => {
+          const student = students.find(s => s.id === d.student_id);
+          if (!student) throw new Error("Select a valid student record first.");
+          const result = await createAccount({ role: "student", student_id: d.student_id });
+          return { ...result, studentAdmission: student.admission };
+        });
+        attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
+      }
 
-      attach("studentLoginForm", async d => {
-        const student = students.find(s => s.id === d.student_id);
-        if (!student) throw new Error("Select a valid student record first.");
-        const result = await createAccount({ role: "student", student_id: d.student_id });
-        return { ...result, studentAdmission: student.admission };
+      const docForm=document.getElementById("studentDocumentForm");
+      if(docForm) docForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const button=docForm.querySelector("button[type='submit']");
+        const data=new FormData(docForm), studentId=String(data.get("student_id")||"");
+        const type=String(data.get("document_type")||""), file=data.get("document_file");
+        if(!file || !file.size) return alert("Choose a document file first.");
+        if(file.size>10*1024*1024) return alert("The file must be 10 MB or smaller.");
+        if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type)) return alert("Use a JPG, PNG, WEBP or PDF file.");
+        button.disabled=true;
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-100);
+        const path=studentId+"/"+type+"/"+crypto.randomUUID()+"-"+safeName;
+        try {
+          const uploaded=await sb.storage.from("student-documents").upload(path,file,{contentType:file.type,upsert:false});
+          if(uploaded.error) throw uploaded.error;
+          const saved=await sb.from("student_documents").insert({
+            student_id:studentId,document_type:type,object_path:path,file_name:file.name,
+            mime_type:file.type,file_size:file.size,uploaded_by:currentUser.id
+          });
+          if(saved.error){await sb.storage.from("student-documents").remove([path]);throw saved.error;}
+          await loadSchoolData(currentUser.role);
+          showPage("students");
+          alert("Student document uploaded successfully.");
+        } catch(err){alert("Could not upload document: "+(err.message||err));button.disabled=false;}
       });
 
-      attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
+      document.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+        button.disabled=true;
+        try {
+          const doc=studentDocuments.find(x=>x.id===button.dataset.downloadStudentDoc);
+          if(!doc) throw new Error("Document record not found. Refresh and try again.");
+          const signed=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
+          if(signed.error) throw signed.error;
+          const link=document.createElement("a");link.href=signed.data.signedUrl;link.download=doc.file_name;link.rel="noopener";document.body.appendChild(link);link.click();link.remove();
+        } catch(err){alert("Could not download document: "+(err.message||err));}
+        finally{button.disabled=false;}
+      }));
+
+      const filter=document.getElementById("studentDocumentStudent");
+      const list=document.getElementById("studentDocumentList");
+      const drawDocs=()=>{
+        if(!filter||!list)return;
+        const selected=filter.value;
+        const docs=studentDocuments.filter(d=>d.student_id===selected);
+        const labels={passport_photo:"Student passport photograph",kcpe_kjsea_certificate:"KJSEA / KCPE result slip or certificate",birth_certificate:"Student birth certificate",parent_id:"Parent / guardian ID"};
+        list.innerHTML=docs.length?docs.map(d=>'<div class="student-document-row"><div><b>'+esc(labels[d.document_type]||d.document_type)+'</b><small>'+esc(d.file_name)+' · '+(d.file_size/1024).toFixed(0)+' KB</small></div><button type="button" data-download-student-doc="'+esc(d.id)+'">Download</button></div>').join(""):'<p>No documents uploaded for this student yet.</p>';
+        list.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+          const doc=studentDocuments.find(x=>x.id===button.dataset.downloadStudentDoc);
+          if(!doc)return;
+          const signed=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
+          if(signed.error)return alert("Could not download: "+signed.error.message);
+          window.open(signed.data.signedUrl,"_blank","noopener");
+        }));
+      };
+      if(filter&&studentList.length)filter.value=studentList[0].id;
+      filter?.addEventListener("change",()=>{const hidden=docForm?.querySelector('input[name="student_id"]');if(hidden)hidden.value=filter.value;drawDocs();});drawDocs();
     });
 
-    return `
-      <form id="addStudentForm" class="entry-form">
-        <h3>Register student</h3>
-        <input name="admission" placeholder="Admission number" required>
-        <input name="name" placeholder="Full name" required>
-        <select name="class_id" required>${opts(classRows, "id", "name", "Select class")}</select>
-        <button type="submit">Add student</button>
-      </form>
-
-      <form id="studentLoginForm" class="entry-form">
-        <h3>Create student login</h3>
-        <p>The student's admission number will be the login ID and temporary password. The student must create a new password at first login.</p>
-        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select student")}</select>
-        <button type="submit">Create student login</button>
-      </form>
-
-      <form id="parentLoginForm" class="entry-form">
-        <h3>Create parent login</h3>
-        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select linked child")}</select>
-        <input name="name" placeholder="Parent or guardian full name" required>
-        <input name="email" type="email" placeholder="Parent email address" required>
-        <input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required>
-        <button type="submit">Create parent login</button>
-      </form>`;
+    const adminForms=isAdmin()?(
+      '<form id="addStudentForm" class="entry-form"><h3>Register student</h3><input name="admission" placeholder="Admission number" required><input name="name" placeholder="Full name" required><select name="class_id" required>'+opts(classRows,"id","name","Select class")+'</select><button type="submit">Add student</button></form>'+
+      '<form id="studentLoginForm" class="entry-form"><h3>Create student login</h3><p>The student uses their admission number as the login ID and temporary password, then changes it at first login.</p><select name="student_id" required>'+opts(studentList,"id","name","Select student")+'</select><button type="submit">Create student login</button></form>'+
+      '<form id="parentLoginForm" class="entry-form"><h3>Create parent login</h3><select name="student_id" required>'+opts(studentList,"id","name","Select linked child")+'</select><input name="name" placeholder="Parent or guardian full name" required><input name="email" type="email" placeholder="Parent email address" required><input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required><button type="submit">Create parent login</button></form>'
+    ):"";
+    const selected=students[0]?.id||"";
+    return adminForms+
+      '<section class="student-documents-admin"><h3>Student documents</h3><p>Upload and download each student’s passport photo, KJSEA/KCPE result slip or certificate, birth certificate and parent/guardian ID.</p>'+
+      '<label>Choose student<select id="studentDocumentStudent">'+opts(studentList,"id","name","Select student")+'</select></label>'+
+      '<div id="studentDocumentList" class="student-document-list"></div>'+
+      '<form id="studentDocumentForm" class="entry-form"><h3>Upload a student document</h3>'+
+      '<input type="hidden" name="student_id" value="'+esc(selected)+'">'+
+      '<label>Document type<select name="document_type" required><option value="passport_photo">Student passport photograph</option><option value="kcpe_kjsea_certificate">KJSEA / KCPE result slip or certificate</option><option value="birth_certificate">Student birth certificate</option><option value="parent_id">Parent / guardian ID</option></select></label>'+
+      '<input name="document_file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required><small>JPG, PNG, WEBP or PDF · Maximum 10 MB.</small><button type="submit">Upload document</button></form></section>';
   });
 
   wrap("renderTeachersPage", async () => {
@@ -294,8 +339,18 @@
     setTimeout(() => {
       attach("resultForm", async d => check(await sb.from("results").upsert({
         student_id: d.student_id, subject_id: d.subject_id, term: d.term.trim(),
-        score: Number(d.score), recorded_by: currentUser.id
+        academic_year: Number(d.academic_year), assessment_type: d.assessment_type,
+        teacher_comment: d.teacher_comment.trim()||null, score: Number(d.score), recorded_by: currentUser.id
       }, { onConflict: "student_id,subject_id,term,academic_year,assessment_type" })));
+      attach("reportCommentsForm", async d => check(await sb.from("report_card_comments").upsert({
+        student_id:d.student_id,term:d.term.trim(),academic_year:Number(d.academic_year),
+        class_teacher_comment:d.class_teacher_comment.trim()||null,
+        principal_comment:d.principal_comment.trim()||null,
+        class_teacher_name:d.class_teacher_name.trim()||null,
+        principal_name:d.principal_name.trim()||null,
+        closing_date:d.closing_date||null,reopening_date:d.reopening_date||null,
+        updated_by:currentUser.id
+      },{onConflict:"student_id,term,academic_year"})));
     });
     return `
       <form id="resultForm" class="entry-form">
@@ -303,8 +358,24 @@
         <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select student")}</select>
         <select name="subject_id" required>${opts(subjectRows, "id", "name", "Select subject")}</select>
         <input name="term" placeholder="Term (e.g. Term 1)" required>
+        <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year (e.g. 2026)" required>
+        <select name="assessment_type" required><option value="exam">Exam</option><option value="cat">CAT</option><option value="assessment">Assessment</option></select>
         <input name="score" type="number" min="0" max="100" step="0.01" placeholder="Score (0-100)" required>
+        <textarea name="teacher_comment" rows="2" maxlength="500" placeholder="Teacher comment for this subject (optional)"></textarea>
         <button type="submit">Save result</button>
+      </form>
+      <form id="reportCommentsForm" class="entry-form">
+        <h3>Report card remarks and school dates</h3>
+        <select name="student_id" required>${opts(studentOptions(),"id","name","Select student")}</select>
+        <input name="term" placeholder="Term (e.g. Term 1)" required>
+        <input name="academic_year" type="number" min="2020" max="2100" placeholder="Academic year" required>
+        <input name="class_teacher_name" placeholder="Class teacher name">
+        <textarea name="class_teacher_comment" rows="3" placeholder="Class teacher remark"></textarea>
+        <input name="principal_name" placeholder="Principal name">
+        <textarea name="principal_comment" rows="3" placeholder="Principal remark"></textarea>
+        <label>Closing date<input name="closing_date" type="date"></label>
+        <label>Reopening date<input name="reopening_date" type="date"></label>
+        <button type="submit">Save report card remarks</button>
       </form>`;
   });
 

@@ -68,10 +68,10 @@ async function loadSchoolData(role) {
 
   const staff = role === "admin" || role === "teacher";
 
-  const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests] = await Promise.all([
-    sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
+  const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments] = await Promise.all([
+    sb.from("students").select("id, admission_no, full_name, class_id, classes(name, grade, stream)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
-    sb.from("results").select("score, term, academic_year, assessment_type, students(admission_no, full_name), subjects(name)"),
+    sb.from("results").select("score, term, academic_year, assessment_type, teacher_comment, student_id, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
@@ -80,9 +80,11 @@ async function loadSchoolData(role) {
     staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
     sb.from("lessons").select("id, title, video_url, scheduled_at, classes(name), subjects(name)").order("scheduled_at"),
     sb.from("revision_materials").select("id, title, file_url, content, classes(name), subjects(name)").order("created_at", { ascending: false }),
-    sb.from("assessments").select("id, title, kind, starts_at, duration_minutes, is_published, classes(name), subjects(name)").eq("kind", "contest").order("starts_at")
+    sb.from("assessments").select("id, title, kind, starts_at, duration_minutes, is_published, classes(name), subjects(name)").eq("kind", "contest").order("starts_at"),
+    sb.from("student_documents").select("id, student_id, document_type, object_path, file_name, mime_type, file_size, created_at").order("created_at", { ascending: false }),
+    sb.from("report_card_comments").select("id, student_id, term, academic_year, class_teacher_comment, principal_comment, closing_date, reopening_date, class_teacher_name, principal_name")
   ]);
-  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests].find(r => r.error);
+  const failed = [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments].find(r => r.error);
   if (failed) {
     throw new Error(failed.error.message);
   }
@@ -93,6 +95,8 @@ async function loadSchoolData(role) {
     admission: s.admission_no,
     name: s.full_name,
     className: s.classes ? s.classes.name : "Unassigned",
+    grade: s.classes?.grade || null,
+    stream: s.classes?.stream || "",
     gender: "-"
   }));
 
@@ -100,10 +104,14 @@ async function loadSchoolData(role) {
   classes = classRecords.map(c => c.name);
 
   results = (res.data || []).map(r => ({
+    studentId: r.student_id, classId: r.students?.class_id || null,
     admission: r.students?.admission_no || "", student: r.students?.full_name || "Student",
+    className: r.students?.classes?.name || "Class", classGrade: r.students?.classes?.grade || null, stream: r.students?.classes?.stream || "",
     subject: r.subjects?.name || "Subject", term: r.term || "", year: r.academic_year || "",
-    assessmentType: r.assessment_type || "exam", marks: Number(r.score), grade: letterGrade(Number(r.score))
+    assessmentType: r.assessment_type || "exam", teacherComment: r.teacher_comment || "", marks: Number(r.score), grade: letterGrade(Number(r.score))
   }));
+  studentDocuments = docs.data || [];
+  reportCardComments = comments.data || [];
   lessons = (les.data || []).map(r => ({id:r.id,title:r.title,videoUrl:r.video_url||"",scheduledAt:r.scheduled_at||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
   revisionMaterials = (materials.data || []).map(r => ({id:r.id,title:r.title,fileUrl:r.file_url||"",content:r.content||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
   competitions = (contests.data || []).map(r => ({id:r.id,title:r.title,startsAt:r.starts_at,duration:r.duration_minutes,published:!!r.is_published,className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
@@ -291,6 +299,8 @@ let attendanceRecords = [];
 
 
 let results = [];
+let studentDocuments = [];
+let reportCardComments = [];
 let lessons = [];
 let revisionMaterials = [];
 let competitions = [];
@@ -1214,16 +1224,56 @@ async function setAttendance(admission, status) {
 
 function renderResultsPage() {
   if (!hasPermission("results")) return showAccessDenied();
-  const avg = results.length ? results.reduce((s,r)=>s+r.marks,0)/results.length : 0;
-  const terms=[...new Set(results.map(r=>r.term).filter(Boolean))], years=[...new Set(results.map(r=>r.year).filter(Boolean))];
-  contentPage.innerHTML=`
-    <div class="page-header results-heading"><div><h2>Academic Results & Report Cards</h2><p>Term results, subject grades and printable performance statements.</p></div><button class="primary-button" onclick="window.print()">Print / Save PDF</button></div>
-    <div class="stats-grid"><div class="stat-card"><div><span>Subject results</span><strong class="stat-value">${results.length}</strong></div></div><div class="stat-card"><div><span>Average</span><strong class="stat-value">${avg.toFixed(1)}%</strong></div></div><div class="stat-card"><div><span>Academic years</span><strong class="stat-value">${years.length}</strong></div></div></div>
-    <div class="panel"><div class="panel-header"><div><h3>Performance statement</h3><p>Records shown according to your school permissions.</p></div></div>
-    <div class="results-filters"><label>Term<select id="resultTermFilter"><option value="">All terms</option>${terms.map(t=>`<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join("")}</select></label><label>Year<select id="resultYearFilter"><option value="">All years</option>${years.map(y=>`<option value="${escapeHTML(y)}">${escapeHTML(y)}</option>`).join("")}</select></label></div>
-    <div class="table-wrapper"><table class="results-table"><thead><tr><th>Admission No.</th><th>Student</th><th>Subject</th><th>Term</th><th>Year</th><th>Assessment</th><th>Marks</th><th>Grade</th></tr></thead><tbody id="resultsTableBody">${results.map(r=>`<tr data-term="${escapeHTML(r.term)}" data-year="${escapeHTML(r.year)}"><td>${escapeHTML(r.admission)}</td><td>${escapeHTML(r.student)}</td><td>${escapeHTML(r.subject)}</td><td>${escapeHTML(r.term)}</td><td>${escapeHTML(r.year)}</td><td>${escapeHTML(r.assessmentType)}</td><td>${r.marks.toFixed(1)}%</td><td><strong>${escapeHTML(r.grade)}</strong></td></tr>`).join("")||'<tr><td colspan="8">No results have been published yet.</td></tr>'}</tbody></table></div></div>`;
-  const filter=()=>{const t=document.getElementById("resultTermFilter").value,y=document.getElementById("resultYearFilter").value;document.querySelectorAll("#resultsTableBody tr[data-term]").forEach(row=>row.hidden=(t&&row.dataset.term!==t)||(y&&row.dataset.year!==y));};
-  document.getElementById("resultTermFilter").addEventListener("change",filter);document.getElementById("resultYearFilter").addEventListener("change",filter);
+  const terms = [...new Set(results.map(r => r.term).filter(Boolean))];
+  const years = [...new Set(results.map(r => String(r.year)).filter(Boolean))];
+  const visibleStudents = students.filter(s => results.some(r => r.studentId === s.id));
+  const initialStudentId = visibleStudents[0]?.id || "";
+  contentPage.innerHTML = '<div class="page-header results-heading"><div><h2>Academic Report Cards</h2><p>Individual student performance reports, ready to print or save as PDF.</p></div><button class="primary-button" onclick="window.print()">Print / Save PDF</button></div>' +
+    '<div class="panel report-controls">' +
+    ((currentUser.role !== "student") ? '<label>Student<select id="reportStudent">' + visibleStudents.map(s=>'<option value="' + escapeHTML(s.id) + '">' + escapeHTML(s.admission + " - " + s.name) + '</option>').join("") + '</select></label>' : '') +
+    '<label>Term<select id="reportTerm">' + terms.map(t=>'<option value="' + escapeHTML(t) + '">' + escapeHTML(t) + '</option>').join("") + '</select></label>' +
+    '<label>Academic year<select id="reportYear">' + years.map(y=>'<option value="' + escapeHTML(y) + '">' + escapeHTML(y) + '</option>').join("") + '</select></label></div><div id="reportCardOutput"></div>';
+  const value = id => document.getElementById(id)?.value || "";
+  const draw = async () => {
+    const studentId = currentUser.role === "student" ? initialStudentId : value("reportStudent");
+    const term=value("reportTerm"), year=value("reportYear"), student=students.find(s=>s.id===studentId);
+    const rows=results.filter(r=>r.studentId===studentId && r.term===term && String(r.year)===year);
+    const classRows=results.filter(r=>r.classId===student?.classId && r.term===term && String(r.year)===year);
+    const gradeRows=results.filter(r=>r.classGrade===student?.grade && r.term===term && String(r.year)===year);
+    const average=rows.length?rows.reduce((n,r)=>n+r.marks,0)/rows.length:0;
+    const grouped=new Map();
+    classRows.forEach(r=>{const list=grouped.get(r.studentId)||[];list.push(r.marks);grouped.set(r.studentId,list);});
+    const positions=[...grouped.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
+    const canRank=currentUser.role==="admin"||currentUser.role==="teacher";
+    const position=canRank?positions.findIndex(x=>x.id===studentId)+1:0;
+    const gradeGroups=new Map();
+    gradeRows.forEach(r=>{const list=gradeGroups.get(r.studentId)||[];list.push(r.marks);gradeGroups.set(r.studentId,list);});
+    const gradePositions=[...gradeGroups.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
+    const overallPosition=currentUser.role==="admin"?gradePositions.findIndex(x=>x.id===studentId)+1:0;
+    const points=rows.reduce((sum,r)=>sum+({A:12,B:10,C:8,D:6,E:4}[r.grade]||0),0);
+    const note=reportCardComments.find(c=>c.student_id===studentId && c.term===term && String(c.academic_year)===year);
+    const photo=studentDocuments.find(d=>d.student_id===studentId && d.document_type==="passport_photo");
+    let photoUrl="";
+    if(photo){const signed=await sb.storage.from("student-documents").createSignedUrl(photo.object_path,300);photoUrl=signed.data?.signedUrl||"";}
+    const out=document.getElementById("reportCardOutput");
+    if(!student||!rows.length){out.innerHTML='<div class="panel"><p>No marks have been entered for this student, term and academic year yet.</p></div>';return;}
+    const subjectRows=rows.map(r=>({row:r,rank:(canRank?1+classRows.filter(x=>x.subject===r.subject&&x.marks>r.marks).length:"—")}));
+    out.innerHTML='<article class="report-card">' +
+      '<header class="report-school-header"><div class="report-school-crest">🏫</div><div><h2>KIRIMUNGE SENIOR SCHOOL</h2><p>ACADEMIC PERFORMANCE REPORT</p><strong>'+escapeHTML(term.toUpperCase())+' · '+escapeHTML(year)+'</strong></div></header>' +
+      '<section class="report-student"><div class="report-photo">'+(photoUrl?'<img src="'+escapeHTML(photoUrl)+'" alt="Student passport photograph">':'<span>Student<br>Photo</span>')+'</div>' +
+      '<div class="report-student-details"><h3>'+escapeHTML(student.name)+'</h3><p><b>Admission No:</b> '+escapeHTML(student.admission)+'</p><p><b>Class:</b> '+escapeHTML(student.className)+'</p><p><b>Academic year:</b> '+escapeHTML(year)+'</p></div>' +
+      '<div class="report-summary"><div><small>Mean score</small><strong>'+average.toFixed(1)+'%</strong></div><div><small>Total marks</small><strong>'+rows.reduce((n,r)=>n+r.marks,0).toFixed(1)+'</strong></div><div><small>Total points</small><strong>'+points+'</strong></div><div><small>Stream position</small><strong>'+(position||"—")+' / '+(positions.length||"—")+'</strong></div><div><small>Overall position</small><strong>'+(overallPosition||"—")+' / '+(gradePositions.length||"—")+'</strong></div></div></section>' +
+      '<h3 class="report-section-title">SUBJECT PERFORMANCE</h3><div class="table-wrapper report-table-wrap"><table class="report-table"><thead><tr><th>Subject</th><th>Marks</th><th>Grade</th><th>Class rank</th><th>Teacher comment</th></tr></thead><tbody>' +
+      subjectRows.map(x=>'<tr><td>'+escapeHTML(x.row.subject)+'</td><td>'+x.row.marks.toFixed(1)+'%</td><td><b>'+escapeHTML(x.row.grade)+'</b></td><td>'+x.rank+'</td><td>'+escapeHTML(x.row.teacherComment||'—')+'</td></tr>').join("") +
+      '</tbody></table></div><section class="report-lower-grid"><div><h3 class="report-section-title">PERFORMANCE BY SUBJECT</h3><div class="report-chart">' +
+      rows.map(r=>'<div class="report-bar-row"><span>'+escapeHTML(r.subject)+'</span><div><i style="width:'+Math.max(0,Math.min(100,r.marks))+'%"></i></div><b>'+r.marks.toFixed(0)+'%</b></div>').join("") +
+      '</div></div><div class="report-remarks"><h3 class="report-section-title">TEACHER & PRINCIPAL REMARKS</h3><p><b>'+escapeHTML(note?.class_teacher_name||"Class Teacher")+'</b><br>'+escapeHTML(note?.class_teacher_comment||"No class teacher remark recorded.")+'</p><p><b>'+escapeHTML(note?.principal_name||"Principal")+'</b><br>'+escapeHTML(note?.principal_comment||"No principal remark recorded.")+'</p></div></section>' +
+      '<footer class="report-footer"><div><b>Closing date:</b> '+escapeHTML(note?.closing_date||"Not set")+'<br><b>Reopening date:</b> '+escapeHTML(note?.reopening_date||"Not set")+'</div><div class="report-signature">Class teacher signature: ____________________<br>Principal signature: ____________________</div></footer></article>';
+  };
+  document.getElementById("reportTerm").addEventListener("change",draw);
+  document.getElementById("reportYear").addEventListener("change",draw);
+  document.getElementById("reportStudent")?.addEventListener("change",draw);
+  draw();
 }
 
 function renderLessonsPage() {
