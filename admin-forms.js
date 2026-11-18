@@ -158,6 +158,7 @@
           window.open(signed.data.signedUrl,"_blank","noopener");
         }));
       };
+      if(filter&&studentList.length)filter.value=studentList[0].id;
       filter?.addEventListener("change",()=>{const hidden=docForm?.querySelector('input[name="student_id"]');if(hidden)hidden.value=filter.value;drawDocs();});drawDocs();
     });
 
