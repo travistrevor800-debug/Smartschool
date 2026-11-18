@@ -71,7 +71,7 @@ async function loadSchoolData(role) {
   const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments] = await Promise.all([
     sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
-    sb.from("results").select("score, term, academic_year, assessment_type, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
+    sb.from("results").select("score, term, academic_year, assessment_type, teacher_comment, student_id, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
