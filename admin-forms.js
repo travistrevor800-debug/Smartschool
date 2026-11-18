@@ -205,10 +205,10 @@
       '<section class="student-documents-admin"><h3>Student documents</h3><p>Upload and download each student’s passport photo, KJSEA/KCPE result slip or certificate, birth certificate and parent/guardian ID.</p>'+
       '<label>Choose student<select id="studentDocumentStudent">'+opts(studentList,"id","name","Select student")+'</select></label>'+
       '<div id="studentDocumentList" class="student-document-list"></div>'+
-      '<form id="studentDocumentForm" class="entry-form"><h3>Upload a student document</h3>'+
+      (isAdmin()?'<form id="studentDocumentForm" class="entry-form"><h3>Upload a student document</h3>'+
       '<input type="hidden" name="student_id" value="'+esc(selected)+'">'+
       '<label>Document type<select name="document_type" required><option value="passport_photo">Student passport photograph</option><option value="kcpe_kjsea_certificate">KJSEA / KCPE result slip or certificate</option><option value="birth_certificate">Student birth certificate</option><option value="parent_id">Parent / guardian ID</option></select></label>'+
-      '<input name="document_file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required><small>JPG, PNG, WEBP or PDF · Maximum 10 MB.</small><button type="submit">Upload document</button></form></section>';
+      '<input name="document_file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required><small>JPG, PNG, WEBP or PDF · Maximum 10 MB.</small><button type="submit">Upload document</button></form>':'<p class="muted">Only authorised administrators can upload, replace or delete student documents.</p>')+'</section>';
   });
 
   wrap("renderTeachersPage", async () => {

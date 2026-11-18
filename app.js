@@ -953,7 +953,7 @@ async function openStudentDocuments(studentId) {
   const byType=Object.fromEntries(Object.keys(labels).map(type=>[type,docs.filter(d=>d.document_type===type)]));
   viewer.hidden=false;
   viewer.innerHTML=`<div class="student-document-viewer-head"><div><h3>Student documents</h3><p><strong>${escapeHTML(student.name)}</strong> · Admission: ${escapeHTML(student.admission)} · ${escapeHTML(student.className)}</p></div><button type="button" class="secondary-button" id="closeStudentDocumentViewer">Close</button></div>
-    <div class="student-document-categories">${Object.entries(labels).map(([type,label])=>`<section class="student-document-category"><div><strong>${label}</strong><small>${byType[type].length?byType[type].length+" file(s) uploaded":"Not uploaded yet"}</small></div>${byType[type].map(doc=>`<div class="student-document-file"><span>${escapeHTML(doc.file_name)} <small>${(Number(doc.file_size)/1024).toFixed(0)} KB · ${escapeHTML((doc.created_at||"").slice(0,10))}</small></span><div><button type="button" data-preview-student-doc="${escapeHTML(doc.id)}">View full document</button><button type="button" data-download-student-doc="${escapeHTML(doc.id)}">Download</button></div></div>`).join("")||'<p class="muted">No file has been uploaded for this document type.</p>'}</section>`).join("")}</div>
+    <div class="student-document-categories">${Object.entries(labels).map(([type,label])=>`<section class="student-document-category"><div><strong>${label}</strong><small>${byType[type].length?byType[type].length+" file(s) uploaded":"Not uploaded yet"}</small></div>${byType[type].map(doc=>`<div class="student-document-file"><span>${escapeHTML(doc.file_name)} <small>${(Number(doc.file_size)/1024).toFixed(0)} KB · ${escapeHTML((doc.created_at||"").slice(0,10))}</small></span><div><button type="button" data-preview-student-doc="${escapeHTML(doc.id)}">View full document</button><button type="button" data-download-student-doc="${escapeHTML(doc.id)}">Download</button>${currentUser?.role==="admin"?'<button type="button" data-replace-student-doc="'+escapeHTML(doc.id)+'">Replace</button><button type="button" data-delete-student-doc="'+escapeHTML(doc.id)+'">Delete</button>':""}</div></div>`).join("")||'<p class="muted">No file has been uploaded for this document type.</p>'}</section>`).join("")}</div>
     <div id="studentDocumentPreview" class="student-document-preview"><p>Select “View full document” to open a full-size preview here.</p></div>`;
   viewer.scrollIntoView({behavior:"smooth",block:"start"});
   document.getElementById("closeStudentDocumentViewer")?.addEventListener("click",()=>{viewer.hidden=true;viewer.innerHTML="";});
@@ -974,6 +974,36 @@ async function openStudentDocuments(studentId) {
     }catch(err){preview.innerHTML="<p>Could not open document: "+escapeHTML(err.message||err)+"</p>";}
     finally{button.disabled=false;}
   }));
+  if(currentUser?.role==="admin"){
+    viewer.querySelectorAll("[data-delete-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+      const doc=studentDocuments.find(d=>d.id===button.dataset.deleteStudentDoc);if(!doc)return;
+      if(!confirm("Permanently delete "+doc.file_name+"? This removes the file and its record."))return;
+      button.disabled=true;
+      try{
+        const removed=await sb.storage.from("student-documents").remove([doc.object_path]);if(removed.error)throw removed.error;
+        const deleted=await sb.from("student_documents").delete().eq("id",doc.id);if(deleted.error)throw deleted.error;
+        await loadSchoolData(currentUser.role);openStudentDocuments(studentId);
+      }catch(err){alert("Could not delete document: "+(err.message||err));button.disabled=false;}
+    }));
+    viewer.querySelectorAll("[data-replace-student-doc]").forEach(button=>button.addEventListener("click",()=>{
+      const doc=studentDocuments.find(d=>d.id===button.dataset.replaceStudentDoc);if(!doc)return;
+      const picker=document.createElement("input");picker.type="file";picker.accept=".jpg,.jpeg,.png,.webp,.pdf";
+      picker.onchange=async()=>{
+        const file=picker.files?.[0];if(!file)return;
+        if(file.size>10*1024*1024||!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type)){alert("Choose a JPG, PNG, WEBP or PDF file up to 10 MB.");return;}
+        button.disabled=true;
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-100),newPath=studentId+"/"+doc.document_type+"/"+crypto.randomUUID()+"-"+safeName;
+        try{
+          const uploaded=await sb.storage.from("student-documents").upload(newPath,file,{contentType:file.type,upsert:false});if(uploaded.error)throw uploaded.error;
+          const updated=await sb.from("student_documents").update({object_path:newPath,file_name:file.name,mime_type:file.type,file_size:file.size,uploaded_by:currentUser.id}).eq("id",doc.id);
+          if(updated.error){await sb.storage.from("student-documents").remove([newPath]);throw updated.error;}
+          const oldRemoved=await sb.storage.from("student-documents").remove([doc.object_path]);
+          if(oldRemoved.error)alert("The new file is saved, but the old storage copy could not be removed. Contact the system administrator.");
+          await loadSchoolData(currentUser.role);openStudentDocuments(studentId);
+        }catch(err){alert("Could not replace document: "+(err.message||err));button.disabled=false;}
+      };picker.click();
+    }));
+  }
   viewer.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
     const doc=studentDocuments.find(d=>d.id===button.dataset.downloadStudentDoc);
     if(!doc)return;
