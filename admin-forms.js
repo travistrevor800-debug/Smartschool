@@ -308,6 +308,23 @@
       </form>`;
   });
 
+  wrap("renderLessonsPage", async () => {
+    if(!isStaff()) return "";
+    const {classRows,subjectRows}=await lookups();
+    setTimeout(()=>{
+      attach("lessonForm",async d=>check(await sb.from("lessons").insert({class_id:d.class_id,subject_id:d.subject_id,teacher_id:currentUser.id,title:d.title.trim(),video_url:d.video_url.trim()||null,scheduled_at:d.scheduled_at?new Date(d.scheduled_at).toISOString():null})));
+      attach("revisionMaterialForm",async d=>check(await sb.from("revision_materials").insert({class_id:d.class_id,subject_id:d.subject_id,title:d.title.trim(),file_url:d.file_url.trim()||null,content:d.content.trim()||null,created_by:currentUser.id})));
+    });
+    return `<form id="lessonForm" class="entry-form"><h3>Publish a lesson</h3><input name="title" placeholder="Lesson title / topic" required><select name="class_id" required>${opts(classRows,"id","name","Select class")}</select><select name="subject_id" required>${opts(subjectRows,"id","name","Select subject")}</select><input name="scheduled_at" type="datetime-local"><input name="video_url" type="url" placeholder="Lesson video URL (optional)"><button type="submit">Publish lesson</button></form>
+    <form id="revisionMaterialForm" class="entry-form"><h3>Add revision material</h3><input name="title" placeholder="Resource title" required><select name="class_id" required>${opts(classRows,"id","name","Select class")}</select><select name="subject_id" required>${opts(subjectRows,"id","name","Select subject")}</select><input name="file_url" type="url" placeholder="PDF / document link (optional)"><textarea name="content" rows="3" placeholder="Notes or description"></textarea><button type="submit">Save learning material</button></form>`;
+  });
+  wrap("renderContestsPage", async () => {
+    if(!isStaff()) return "";
+    const {classRows,subjectRows}=await lookups();
+    setTimeout(()=>attach("contestForm",async d=>check(await sb.from("assessments").insert({class_id:d.class_id,subject_id:d.subject_id,kind:"contest",title:d.title.trim(),starts_at:new Date(d.starts_at).toISOString(),duration_minutes:Number(d.duration_minutes),is_published:d.is_published==="true",created_by:currentUser.id}))));
+    return `<form id="contestForm" class="entry-form"><h3>Create an academic competition</h3><input name="title" placeholder="Competition / challenge title" required><select name="class_id" required>${opts(classRows,"id","name","Select class")}</select><select name="subject_id" required>${opts(subjectRows,"id","name","Select subject")}</select><input name="starts_at" type="datetime-local" required><input name="duration_minutes" type="number" min="1" max="600" value="30" required><select name="is_published"><option value="false">Save as draft</option><option value="true">Publish to students</option></select><button type="submit">Save competition</button></form>`;
+  });
+
   wrap("renderAnnouncementsPage", async () => {
     if (!isAdmin()) return "";
     setTimeout(() => {
