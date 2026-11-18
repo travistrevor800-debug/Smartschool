@@ -885,72 +885,82 @@ function updateDashboard() {
    ========================================================= */
 
 function renderStudentsPage() {
-
-  if (!hasPermission("students")) {
-
-    showAccessDenied();
-
-    return;
-
-  }
-
-
+  if (!hasPermission("students")) { showAccessDenied(); return; }
   contentPage.innerHTML = `
-
-    <div class="page-header">
-
-      <div>
-        <h2>Students</h2>
-        <p>Manage student records.</p>
-      </div>
-
-    </div>
-
+    <div class="page-header"><div><h2>Students</h2><p>Search by admission number or student name, then open the student's complete document file.</p></div></div>
     <div class="panel">
-
-      <div class="table-wrapper">
-
-        <table>
-
-          <thead>
-
-            <tr>
-              <th>Admission</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Gender</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            ${students.map(student => `
-
-              <tr>
-
-                <td>${escapeHTML(student.admission)}</td>
-
-                <td>${escapeHTML(student.name)}</td>
-
-                <td>${escapeHTML(student.className)}</td>
-
-                <td>${escapeHTML(student.gender)}</td>
-
-              </tr>
-
-            `).join("")}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
+      <label class="student-search-label" for="studentListSearch">Search students</label>
+      <input id="studentListSearch" class="student-list-search" type="search" placeholder="Enter student name or admission number..." autocomplete="off">
+      <div class="table-wrapper"><table><thead><tr><th>Admission</th><th>Name</th><th>Class</th><th>Gender</th><th>Documents</th></tr></thead>
+      <tbody id="studentListRows"></tbody></table></div>
+      <p id="studentSearchCount" class="muted"></p>
     </div>
-  `;
+    <div id="studentDocumentViewer" class="student-document-viewer panel" hidden></div>`;
+  const search=document.getElementById("studentListSearch");
+  const rows=document.getElementById("studentListRows");
+  const count=document.getElementById("studentSearchCount");
+  const draw=()=>{
+    const term=(search.value||"").trim().toLowerCase();
+    const found=students.filter(st=>String(st.admission).toLowerCase().includes(term)||String(st.name).toLowerCase().includes(term)||String(st.className).toLowerCase().includes(term));
+    rows.innerHTML=found.map(st=>`<tr><td>${escapeHTML(st.admission)}</td><td>${escapeHTML(st.name)}</td><td>${escapeHTML(st.className)}</td><td>${escapeHTML(st.gender)}</td><td><button type="button" class="student-open-docs" data-open-student-docs="${escapeHTML(st.id)}">View documents (${studentDocuments.filter(d=>d.student_id===st.id).length})</button></td></tr>`).join("")||'<tr><td colspan="5">No matching students found.</td></tr>';
+    count.textContent=found.length+" of "+students.length+" students";
+    rows.querySelectorAll("[data-open-student-docs]").forEach(button=>button.addEventListener("click",()=>openStudentDocuments(button.dataset.openStudentDocs)));
+  };
+  search.addEventListener("input",draw);
+  draw();
 }
 
+async function openStudentDocuments(studentId) {
+  if (!hasPermission("students")) { alert("You do not have permission to view student records."); return; }
+  const student=students.find(st=>st.id===studentId);
+  if(!student)return;
+  const filter=document.getElementById("studentDocumentStudent");
+  if(filter){filter.value=studentId;filter.dispatchEvent(new Event("change"));}
+  const viewer=document.getElementById("studentDocumentViewer");
+  if(!viewer)return;
+  const labels={
+    passport_photo:"Student passport photograph",
+    kcpe_kjsea_certificate:"KCPE / KJSEA result slip or certificate",
+    birth_certificate:"Student birth certificate",
+    parent_id:"Parent / guardian ID"
+  };
+  const docs=studentDocuments.filter(d=>d.student_id===studentId);
+  const byType=Object.fromEntries(Object.keys(labels).map(type=>[type,docs.filter(d=>d.document_type===type)]));
+  viewer.hidden=false;
+  viewer.innerHTML=`<div class="student-document-viewer-head"><div><h3>Student documents</h3><p><strong>${escapeHTML(student.name)}</strong> · Admission: ${escapeHTML(student.admission)} · ${escapeHTML(student.className)}</p></div><button type="button" class="secondary-button" id="closeStudentDocumentViewer">Close</button></div>
+    <div class="student-document-categories">${Object.entries(labels).map(([type,label])=>`<section class="student-document-category"><div><strong>${label}</strong><small>${byType[type].length?byType[type].length+" file(s) uploaded":"Not uploaded yet"}</small></div>${byType[type].map(doc=>`<div class="student-document-file"><span>${escapeHTML(doc.file_name)} <small>${(Number(doc.file_size)/1024).toFixed(0)} KB · ${escapeHTML((doc.created_at||"").slice(0,10))}</small></span><div><button type="button" data-preview-student-doc="${escapeHTML(doc.id)}">View full document</button><button type="button" data-download-student-doc="${escapeHTML(doc.id)}">Download</button></div></div>`).join("")||'<p class="muted">No file has been uploaded for this document type.</p>'}</section>`).join("")}</div>
+    <div id="studentDocumentPreview" class="student-document-preview"><p>Select “View full document” to open a full-size preview here.</p></div>`;
+  viewer.scrollIntoView({behavior:"smooth",block:"start"});
+  document.getElementById("closeStudentDocumentViewer")?.addEventListener("click",()=>{viewer.hidden=true;viewer.innerHTML="";});
+  viewer.querySelectorAll("[data-preview-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+    const doc=studentDocuments.find(d=>d.id===button.dataset.previewStudentDoc);
+    const preview=document.getElementById("studentDocumentPreview");
+    if(!doc||!preview)return;
+    button.disabled=true;preview.innerHTML="<p>Opening document securely…</p>";
+    try{
+      const result=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,300);
+      if(result.error)throw result.error;
+      const url=result.data.signedUrl;
+      preview.innerHTML=doc.mime_type==="application/pdf"
+        ?'<iframe title="Student document preview" src="'+escapeHTML(url)+'" class="student-document-frame"></iframe>'
+        :doc.mime_type.startsWith("image/")
+          ?'<img alt="'+escapeHTML(doc.file_name)+'" src="'+escapeHTML(url)+'" class="student-document-image">'
+          :'<p>Preview is unavailable for this file type. Use Download instead.</p>';
+    }catch(err){preview.innerHTML="<p>Could not open document: "+escapeHTML(err.message||err)+"</p>";}
+    finally{button.disabled=false;}
+  }));
+  viewer.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+    const doc=studentDocuments.find(d=>d.id===button.dataset.downloadStudentDoc);
+    if(!doc)return;
+    button.disabled=true;
+    try{
+      const result=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
+      if(result.error)throw result.error;
+      const link=document.createElement("a");link.href=result.data.signedUrl;link.download=doc.file_name;link.rel="noopener";document.body.appendChild(link);link.click();link.remove();
+    }catch(err){alert("Could not download document: "+(err.message||err));}
+    finally{button.disabled=false;}
+  }));
+}
 
 /* =========================================================
    TEACHERS

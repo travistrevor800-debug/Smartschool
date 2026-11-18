@@ -10,6 +10,22 @@
     .entry-form input,.entry-form select{padding:10px;font-size:16px;border:1px solid #ccc;border-radius:6px;width:100%;box-sizing:border-box}
     .entry-form button{padding:11px;font-size:16px;border:0;border-radius:6px;background:#1f5fbf;color:#fff;cursor:pointer}
     .entry-form button:disabled{opacity:.6}\n    .class-admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ddd}\n    .class-admin-row small{display:block;color:#667085;margin-top:3px}\n    .class-admin-row .danger-button{background:#b42318;padding:8px 12px}
+    .student-search-label{display:block;font-weight:700;margin-bottom:7px}
+    .student-list-search{width:100%;max-width:560px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;font-size:16px;margin:0 0 14px;box-sizing:border-box}
+    .student-open-docs{padding:8px 12px;border:0;border-radius:7px;background:var(--navy);color:#fff;font-weight:600;cursor:pointer}
+    .student-document-viewer{margin-top:18px;scroll-margin-top:18px}
+    .student-document-viewer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .student-document-categories{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+    .student-document-category{border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+    .student-document-category>div:first-child small,.student-document-file small{display:block;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+    .student-document-file{border-top:1px solid var(--line);padding-top:10px;margin-top:10px;display:grid;gap:8px}
+    .student-document-file>div{display:flex;gap:8px;flex-wrap:wrap}
+    .student-document-file button,.student-document-viewer-head button{padding:8px 11px;border:0;border-radius:7px;background:var(--navy);color:#fff;cursor:pointer}
+    .student-document-preview{border:1px solid var(--line);border-radius:10px;padding:10px;min-height:100px;overflow:hidden}
+    .student-document-frame{width:100%;height:75vh;min-height:480px;border:0}
+    .student-document-image{display:block;max-width:100%;max-height:75vh;margin:0 auto;object-fit:contain}
+    .student-document-viewer[hidden]{display:none}
+
   `;
   document.head.appendChild(style);
 
