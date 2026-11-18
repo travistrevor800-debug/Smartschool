@@ -69,7 +69,7 @@ async function loadSchoolData(role) {
   const staff = role === "admin" || role === "teacher";
 
   const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments] = await Promise.all([
-    sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
+    sb.from("students").select("id, admission_no, full_name, class_id, classes(name, grade, stream)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
     sb.from("results").select("score, term, academic_year, assessment_type, teacher_comment, student_id, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
@@ -95,6 +95,8 @@ async function loadSchoolData(role) {
     admission: s.admission_no,
     name: s.full_name,
     className: s.classes ? s.classes.name : "Unassigned",
+    grade: s.classes?.grade || null,
+    stream: s.classes?.stream || "",
     gender: "-"
   }));
 
