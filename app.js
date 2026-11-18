@@ -1247,7 +1247,7 @@ function renderResultsPage() {
     const gradeGroups=new Map();
     gradeRows.forEach(r=>{const list=gradeGroups.get(r.studentId)||[];list.push(r.marks);gradeGroups.set(r.studentId,list);});
     const gradePositions=[...gradeGroups.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
-    const overallPosition=canRank?gradePositions.findIndex(x=>x.id===studentId)+1:0;
+    const overallPosition=currentUser.role==="admin"?gradePositions.findIndex(x=>x.id===studentId)+1:0;
     const points=rows.reduce((sum,r)=>sum+({A:12,B:10,C:8,D:6,E:4}[r.grade]||0),0);
     const note=reportCardComments.find(c=>c.student_id===studentId && c.term===term && String(c.academic_year)===year);
     const photo=studentDocuments.find(d=>d.student_id===studentId && d.document_type==="passport_photo");
