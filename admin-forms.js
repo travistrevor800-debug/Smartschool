@@ -28,6 +28,15 @@
     .parent-child-document-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--line)}
     .parent-child-document-row small{display:block;color:var(--muted);margin-top:4px}
     .parent-child-document-row button{padding:10px 14px;border:0;border-radius:8px;background:var(--navy);color:#fff;font-weight:600;cursor:pointer}
+    .attendance-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:14px}
+    .attendance-summary-grid .panel{display:grid;gap:6px;margin:0}
+    .attendance-summary-grid small{color:var(--muted)}
+    .attendance-summary-grid strong{font-size:24px;color:var(--navy)}
+    .attendance-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+    .attendance-filters label{display:grid;gap:6px;font-weight:600}
+    .attendance-filters input,.attendance-filters select{min-width:0;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+    #attendanceRows select{min-width:120px;padding:8px;border:1px solid var(--line);border-radius:7px}
+
 
   `;
   document.head.appendChild(style);
