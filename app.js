@@ -78,7 +78,7 @@ async function loadSchoolData(role) {
     sb.from("fee_payments").select("id, amount, method, reference, receipt_no, invoice_id, term, academic_year, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
     sb.from("fee_invoices").select("id, student_id, term, academic_year, amount_due, due_date, invoice_no, created_at, students(admission_no, full_name)").order("created_at", { ascending: false }),
     sb.from("fee_schedules").select("id, class_id, term, academic_year, title, amount, due_date, is_active, classes(name)").order("created_at", { ascending: false }),
-    sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
+    sb.from("student_attendance").select("status, attendance_date, class_id, students(id, admission_no, full_name, class_id, classes(name))").order("attendance_date", { ascending: false }),
     staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
     sb.from("lessons").select("id, title, video_url, scheduled_at, classes(name), subjects(name)").order("scheduled_at"),
     sb.from("revision_materials").select("id, title, file_url, content, classes(name), subjects(name)").order("created_at", { ascending: false }),
@@ -158,7 +158,10 @@ async function loadSchoolData(role) {
     admission: r.students.admission_no,
     student: r.students.full_name,
     status: cap(r.status),
-    date: r.attendance_date
+    date: r.attendance_date,
+    studentId: r.students?.id || "",
+    classId: r.class_id || r.students?.class_id || "",
+    className: r.students?.classes?.name || "Unassigned"
   }));
 
   teachers = tch.data.map(t => ({
@@ -508,14 +511,19 @@ function admissionNumberToEmail(admissionNo) {
   return `student.${hex}@login.smartschool.invalid`;
 }
 
+function parentAdmissionToEmail(admissionNo) {
+  const normalized = String(admissionNo || "").trim().toLowerCase();
+  const bytes = new TextEncoder().encode(normalized);
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  return `parent.${hex}@login.smartschool.invalid`;
+}
+
 function updateLoginIdentityField() {
-  const isStudent = userRole.value === "student";
-  usernameInput.type = isStudent ? "text" : "email";
-  usernameInput.placeholder = isStudent
-    ? "Enter your admission number"
-    : "Enter your email address";
+  const admissionLogin = userRole.value === "student" || userRole.value === "parent";
+  usernameInput.type = admissionLogin ? "text" : "email";
+  usernameInput.placeholder = admissionLogin ? "Enter your child's admission number" : "Enter your email address";
   const label = document.querySelector('label[for="username"]');
-  if (label) label.textContent = isStudent ? "Admission number" : "Email address";
+  if (label) label.textContent = admissionLogin ? "Child's admission number" : "Email address";
 }
 userRole.addEventListener("change", updateLoginIdentityField);
 updateLoginIdentityField();
@@ -570,8 +578,8 @@ function showFirstLoginPasswordChange(loginIdentity, chosenRole) {
   form.id = "firstLoginPasswordForm";
   form.className = "entry-form";
   form.innerHTML = `
-    <h2>Secure your student account</h2>
-    <p>Your admission number was used as your temporary password. Create a new password before entering Smartschool.</p>
+    <h2>Secure your account</h2>
+    <p>Your child's admission number was used as your temporary password. Create a new password before entering Smartschool.</p>
     <label for="firstNewPassword">New password (at least 10 characters)</label>
     <input id="firstNewPassword" name="new_password" type="password" minlength="10" autocomplete="new-password" required>
     <label for="firstConfirmPassword">Confirm new password</label>
@@ -652,7 +660,9 @@ loginForm.addEventListener("submit", async function(event) {
   try {
     const email = chosenRole === "student"
       ? admissionNumberToEmail(loginIdentity)
-      : loginIdentity.toLowerCase();
+      : chosenRole === "parent"
+        ? parentAdmissionToEmail(loginIdentity)
+        : loginIdentity.toLowerCase();
 
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error || !data.user) {
@@ -1106,148 +1116,48 @@ function renderClassesPage() {
    ========================================================= */
 
 function renderAttendancePage() {
-
-  if (!hasPermission("attendance")) {
-
-    showAccessDenied();
-
-    return;
-
-  }
-
-
+  if (!hasPermission("attendance")) return showAccessDenied();
+  const canMark = currentUser.role === "admin" || currentUser.role === "teacher";
+  const today = new Date().toLocaleDateString("en-CA");
+  const present = students.filter(st => attendanceRecords.some(r => r.studentId === st.id && r.date === today && r.status.toLowerCase() === "present")).length;
+  const absent = students.filter(st => attendanceRecords.some(r => r.studentId === st.id && r.date === today && r.status.toLowerCase() === "absent")).length;
+  const late = students.filter(st => attendanceRecords.some(r => r.studentId === st.id && r.date === today && r.status.toLowerCase() === "late")).length;
   contentPage.innerHTML = `
-
-    <div class="page-header">
-
-      <div>
-        <h2>Attendance</h2>
-        <p>Track student attendance.</p>
-      </div>
-
-    </div>
-
-    <div class="panel">
-
-      <div class="table-wrapper">
-
-        <table>
-
-          <thead>
-
-            <tr>
-              <th>Admission</th>
-              <th>Student</th>
-              <th>Status</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            ${students.map(student => `
-
-              <tr>
-
-                <td>
-                  ${escapeHTML(student.admission)}
-                </td>
-
-                <td>
-                  ${escapeHTML(student.name)}
-                </td>
-
-                <td>
-
-                  <select
-                    onchange="setAttendance('${student.admission}', this.value)"
-                  >
-
-                    <option value="">
-                      Select
-                    </option>
-
-                    <option value="Present">
-                      Present
-                    </option>
-
-                    <option value="Absent">
-                      Absent
-                    </option>
-
-                    <option value="Late">
-                      Late
-                    </option>
-
-                  </select>
-
-                </td>
-
-              </tr>
-
-            `).join("")}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  `;
-}
-
-
-async function setAttendance(admission, status) {
-
-  if (!hasPermission("attendance")) {
-    alert("Access denied.");
-    return;
-  }
-
-  if (!status) {
-    return;
-  }
-
-  const student = students.find(item => item.admission === admission);
-
-  if (!student) {
-    return;
-  }
-
-  const today = new Date().toISOString().split("T")[0];
-
-  const { error } = await sb.from("student_attendance").upsert(
-    {
-      student_id: student.id,
-      class_id: student.classId,
-      attendance_date: today,
-      status: status.toLowerCase(),
-      marked_by: currentUser.id
-    },
-    { onConflict: "student_id,attendance_date" }
-  );
-
-  if (error) {
-    alert("Could not save attendance: " + error.message);
-    return;
-  }
-
-  attendanceRecords = attendanceRecords.filter(
-    r => !(r.admission === admission && r.date === today)
-  );
-
-  attendanceRecords.push({
-    admission: admission,
-    student: student.name,
-    status: status,
-    date: today
+    <div class="page-header"><div><h2>Attendance Register</h2><p>${canMark ? "Mark and review daily attendance." : "Review attendance records for your linked child."}</p></div>${canMark ? '<button type="button" class="primary-button" id="exportAttendance">Download CSV</button>' : ""}</div>
+    <div class="attendance-summary-grid"><div class="panel"><small>Present today</small><strong>${present}</strong></div><div class="panel"><small>Absent today</small><strong>${absent}</strong></div><div class="panel"><small>Late today</small><strong>${late}</strong></div><div class="panel"><small>Students in view</small><strong>${students.length}</strong></div></div>
+    <div class="panel"><div class="attendance-filters">
+      <label>Search student<input id="attendanceSearch" type="search" placeholder="Name or admission number"></label>
+      <label>Date<input id="attendanceDate" type="date" value="${today}"></label>
+      <label>Status<select id="attendanceStatusFilter"><option value="">All statuses</option><option>Present</option><option>Absent</option><option>Late</option><option>Not marked</option></select></label>
+    </div><div class="table-wrapper"><table><thead><tr><th>Admission</th><th>Student</th><th>Class</th><th>Date</th><th>Status ${canMark ? "/ Mark" : ""}</th></tr></thead><tbody id="attendanceRows"></tbody></table></div><p id="attendanceCount" class="muted"></p></div>`;
+  const search=document.getElementById("attendanceSearch"),date=document.getElementById("attendanceDate"),status=document.getElementById("attendanceStatusFilter"),tbody=document.getElementById("attendanceRows");
+  const draw=()=>{
+    const day=date.value||today,term=search.value.trim().toLowerCase(),wanted=status.value;
+    const visible=students.map(st=>{const record=attendanceRecords.find(r=>r.studentId===st.id&&r.date===day);return {...st,status:record?.status||"Not marked",date:day};})
+      .filter(r=>(!term||r.name.toLowerCase().includes(term)||r.admission.toLowerCase().includes(term))&&(!wanted||r.status===wanted));
+    tbody.innerHTML=visible.map(r=>`<tr><td>${escapeHTML(r.admission)}</td><td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.className)}</td><td>${escapeHTML(r.date)}</td><td>${canMark?`<select aria-label="Attendance for ${escapeHTML(r.name)}" data-attendance-admission="${escapeHTML(r.admission)}"><option value="">Not marked</option><option value="Present" ${r.status==="Present"?"selected":""}>Present</option><option value="Absent" ${r.status==="Absent"?"selected":""}>Absent</option><option value="Late" ${r.status==="Late"?"selected":""}>Late</option></select>`:escapeHTML(r.status)}</td></tr>`).join("")||'<tr><td colspan="5">No attendance records match these filters.</td></tr>';
+    document.getElementById("attendanceCount").textContent=visible.length+" students shown";
+    if(canMark)tbody.querySelectorAll("[data-attendance-admission]").forEach(el=>el.addEventListener("change",async()=>{if(el.value)await setAttendance(el.dataset.attendanceAdmission,el.value,day);}));
+  };
+  [search,date,status].forEach(el=>el.addEventListener("input",draw));draw();
+  if(canMark)document.getElementById("exportAttendance").addEventListener("click",()=>{
+    const day=date.value||today,header=["Admission","Student","Class","Date","Status"];
+    const data=students.map(st=>{const r=attendanceRecords.find(x=>x.studentId===st.id&&x.date===day);return [st.admission,st.name,st.className,day,r?.status||"Not marked"];});
+    const csv=[header,...data].map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\n");
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const link=document.createElement("a");link.href=url;link.download="Kirimunge-attendance-"+day+".csv";link.click();URL.revokeObjectURL(url);
   });
-
-  alert(`Attendance marked as ${status}.`);
-
 }
-
+async function setAttendance(admission,status,dateOverride) {
+  if(!hasPermission("attendance")||!["admin","teacher"].includes(currentUser.role)){alert("Only authorised school staff can mark attendance.");return;}
+  if(!status)return;
+  const student=students.find(item=>item.admission===admission);if(!student)return;
+  const date=dateOverride||new Date().toLocaleDateString("en-CA");
+  const {error}=await sb.from("student_attendance").upsert({student_id:student.id,class_id:student.classId,attendance_date:date,status:status.toLowerCase(),marked_by:currentUser.id},{onConflict:"student_id,attendance_date"});
+  if(error){alert("Could not save attendance: "+error.message);return;}
+  attendanceRecords=attendanceRecords.filter(r=>!(r.admission===admission&&r.date===date));
+  attendanceRecords.push({admission,student:student.name,studentId:student.id,classId:student.classId,className:student.className,status,date});
+  renderAttendancePage();
+}
 
 /* =========================================================
    RESULTS
