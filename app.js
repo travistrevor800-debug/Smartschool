@@ -71,7 +71,7 @@ async function loadSchoolData(role) {
   const [stu, cls, res, asg, ann, bal, pay, att, tch, les, materials, contests, docs, comments] = await Promise.all([
     sb.from("students").select("id, admission_no, full_name, class_id, classes(name)"),
     sb.from("classes").select("id, name, grade, stream").order("grade").order("name"),
-    sb.from("results").select("score, term, academic_year, assessment_type, students(id, admission_no, full_name, class_id, classes(name)), subjects(name)"),
+    sb.from("results").select("score, term, academic_year, assessment_type, students(id, admission_no, full_name, class_id, classes(name, grade, stream)), subjects(name)"),
     sb.from("assignments").select("title, due_at, classes(name), subjects(name)"),
     sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
@@ -104,7 +104,7 @@ async function loadSchoolData(role) {
   results = (res.data || []).map(r => ({
     studentId: r.student_id, classId: r.students?.class_id || null,
     admission: r.students?.admission_no || "", student: r.students?.full_name || "Student",
-    className: r.students?.classes?.name || "Class",
+    className: r.students?.classes?.name || "Class", grade: r.students?.classes?.grade || null, stream: r.students?.classes?.stream || "",
     subject: r.subjects?.name || "Subject", term: r.term || "", year: r.academic_year || "",
     assessmentType: r.assessment_type || "exam", marks: Number(r.score), grade: letterGrade(Number(r.score))
   }));
@@ -1237,12 +1237,17 @@ function renderResultsPage() {
     const term=value("reportTerm"), year=value("reportYear"), student=students.find(s=>s.id===studentId);
     const rows=results.filter(r=>r.studentId===studentId && r.term===term && String(r.year)===year);
     const classRows=results.filter(r=>r.classId===student?.classId && r.term===term && String(r.year)===year);
+    const gradeRows=results.filter(r=>r.grade===student?.grade && r.term===term && String(r.year)===year);
     const average=rows.length?rows.reduce((n,r)=>n+r.marks,0)/rows.length:0;
     const grouped=new Map();
     classRows.forEach(r=>{const list=grouped.get(r.studentId)||[];list.push(r.marks);grouped.set(r.studentId,list);});
     const positions=[...grouped.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
     const canRank=currentUser.role==="admin"||currentUser.role==="teacher";
     const position=canRank?positions.findIndex(x=>x.id===studentId)+1:0;
+    const gradeGroups=new Map();
+    gradeRows.forEach(r=>{const list=gradeGroups.get(r.studentId)||[];list.push(r.marks);gradeGroups.set(r.studentId,list);});
+    const gradePositions=[...gradeGroups.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
+    const overallPosition=canRank?gradePositions.findIndex(x=>x.id===studentId)+1:0;
     const points=rows.reduce((sum,r)=>sum+({A:12,B:10,C:8,D:6,E:4}[r.grade]||0),0);
     const note=reportCardComments.find(c=>c.student_id===studentId && c.term===term && String(c.academic_year)===year);
     const photo=studentDocuments.find(d=>d.student_id===studentId && d.document_type==="passport_photo");
@@ -1255,7 +1260,7 @@ function renderResultsPage() {
       '<header class="report-school-header"><div class="report-school-crest">🏫</div><div><h2>KIRIMUNGE SENIOR SCHOOL</h2><p>ACADEMIC PERFORMANCE REPORT</p><strong>'+escapeHTML(term.toUpperCase())+' · '+escapeHTML(year)+'</strong></div></header>' +
       '<section class="report-student"><div class="report-photo">'+(photoUrl?'<img src="'+escapeHTML(photoUrl)+'" alt="Student passport photograph">':'<span>Student<br>Photo</span>')+'</div>' +
       '<div class="report-student-details"><h3>'+escapeHTML(student.name)+'</h3><p><b>Admission No:</b> '+escapeHTML(student.admission)+'</p><p><b>Class:</b> '+escapeHTML(student.className)+'</p><p><b>Academic year:</b> '+escapeHTML(year)+'</p></div>' +
-      '<div class="report-summary"><div><small>Mean score</small><strong>'+average.toFixed(1)+'%</strong></div><div><small>Total marks</small><strong>'+rows.reduce((n,r)=>n+r.marks,0).toFixed(1)+'</strong></div><div><small>Total points</small><strong>'+points+'</strong></div><div><small>Class position</small><strong>'+(position||"—")+' / '+(positions.length||"—")+'</strong></div></div></section>' +
+      '<div class="report-summary"><div><small>Mean score</small><strong>'+average.toFixed(1)+'%</strong></div><div><small>Total marks</small><strong>'+rows.reduce((n,r)=>n+r.marks,0).toFixed(1)+'</strong></div><div><small>Total points</small><strong>'+points+'</strong></div><div><small>Stream position</small><strong>'+(position||"—")+' / '+(positions.length||"—")+'</strong></div><div><small>Overall position</small><strong>'+(overallPosition||"—")+' / '+(gradePositions.length||"—")+'</strong></div></div></section>' +
       '<h3 class="report-section-title">SUBJECT PERFORMANCE</h3><div class="table-wrapper report-table-wrap"><table class="report-table"><thead><tr><th>Subject</th><th>Marks</th><th>Grade</th><th>Class rank</th><th>Teacher comment</th></tr></thead><tbody>' +
       subjectRows.map(x=>'<tr><td>'+escapeHTML(x.row.subject)+'</td><td>'+x.row.marks.toFixed(1)+'%</td><td><b>'+escapeHTML(x.row.grade)+'</b></td><td>'+x.rank+'</td><td>—</td></tr>').join("") +
       '</tbody></table></div><section class="report-lower-grid"><div><h3 class="report-section-title">PERFORMANCE BY SUBJECT</h3><div class="report-chart">' +
