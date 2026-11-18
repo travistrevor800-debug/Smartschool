@@ -1241,7 +1241,8 @@ function renderResultsPage() {
     const grouped=new Map();
     classRows.forEach(r=>{const list=grouped.get(r.studentId)||[];list.push(r.marks);grouped.set(r.studentId,list);});
     const positions=[...grouped.entries()].map(([id,marks])=>({id,average:marks.reduce((a,b)=>a+b,0)/marks.length})).sort((a,b)=>b.average-a.average);
-    const position=positions.findIndex(x=>x.id===studentId)+1;
+    const canRank=currentUser.role==="admin"||currentUser.role==="teacher";
+    const position=canRank?positions.findIndex(x=>x.id===studentId)+1:0;
     const points=rows.reduce((sum,r)=>sum+({A:12,B:10,C:8,D:6,E:4}[r.grade]||0),0);
     const note=reportCardComments.find(c=>c.student_id===studentId && c.term===term && String(c.academic_year)===year);
     const photo=studentDocuments.find(d=>d.student_id===studentId && d.document_type==="passport_photo");
@@ -1249,7 +1250,7 @@ function renderResultsPage() {
     if(photo){const signed=await sb.storage.from("student-documents").createSignedUrl(photo.object_path,300);photoUrl=signed.data?.signedUrl||"";}
     const out=document.getElementById("reportCardOutput");
     if(!student||!rows.length){out.innerHTML='<div class="panel"><p>No marks have been entered for this student, term and academic year yet.</p></div>';return;}
-    const subjectRows=rows.map(r=>({row:r,rank:1+classRows.filter(x=>x.subject===r.subject&&x.marks>r.marks).length}));
+    const subjectRows=rows.map(r=>({row:r,rank:(canRank?1+classRows.filter(x=>x.subject===r.subject&&x.marks>r.marks).length:"—")}));
     out.innerHTML='<article class="report-card">' +
       '<header class="report-school-header"><div class="report-school-crest">🏫</div><div><h2>KIRIMUNGE SENIOR SCHOOL</h2><p>ACADEMIC PERFORMANCE REPORT</p><strong>'+escapeHTML(term.toUpperCase())+' · '+escapeHTML(year)+'</strong></div></header>' +
       '<section class="report-student"><div class="report-photo">'+(photoUrl?'<img src="'+escapeHTML(photoUrl)+'" alt="Student passport photograph">':'<span>Student<br>Photo</span>')+'</div>' +
