@@ -25,6 +25,9 @@
     .student-document-frame{width:100%;height:75vh;min-height:480px;border:0}
     .student-document-image{display:block;max-width:100%;max-height:75vh;margin:0 auto;object-fit:contain}
     .student-document-viewer[hidden]{display:none}
+    .parent-child-document-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--line)}
+    .parent-child-document-row small{display:block;color:var(--muted);margin-top:4px}
+    .parent-child-document-row button{padding:10px 14px;border:0;border-radius:8px;background:var(--navy);color:#fff;font-weight:600;cursor:pointer}
 
   `;
   document.head.appendChild(style);
