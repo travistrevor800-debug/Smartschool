@@ -87,50 +87,94 @@
   }
 
   wrap("renderStudentsPage", async () => {
-    if (!isAdmin()) return "";
+    if (!isStaff()) return "";
     const { classRows } = await lookups();
-
+    const studentList = studentOptions();
     setTimeout(() => {
-      attach("addStudentForm", async d => check(await sb.from("students").insert({
-        admission_no: d.admission.trim(),
-        full_name: d.name.trim(),
-        class_id: d.class_id || null
-      })));
+      if (isAdmin()) {
+        attach("addStudentForm", async d => check(await sb.from("students").insert({
+          admission_no: d.admission.trim(), full_name: d.name.trim(), class_id: d.class_id || null
+        })));
+        attach("studentLoginForm", async d => {
+          const student = students.find(s => s.id === d.student_id);
+          if (!student) throw new Error("Select a valid student record first.");
+          const result = await createAccount({ role: "student", student_id: d.student_id });
+          return { ...result, studentAdmission: student.admission };
+        });
+        attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
+      }
 
-      attach("studentLoginForm", async d => {
-        const student = students.find(s => s.id === d.student_id);
-        if (!student) throw new Error("Select a valid student record first.");
-        const result = await createAccount({ role: "student", student_id: d.student_id });
-        return { ...result, studentAdmission: student.admission };
+      const docForm=document.getElementById("studentDocumentForm");
+      if(docForm) docForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        const button=docForm.querySelector("button[type='submit']");
+        const data=new FormData(docForm), studentId=String(data.get("student_id")||"");
+        const type=String(data.get("document_type")||""), file=data.get("document_file");
+        if(!file || !file.size) return alert("Choose a document file first.");
+        if(file.size>10*1024*1024) return alert("The file must be 10 MB or smaller.");
+        if(!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type)) return alert("Use a JPG, PNG, WEBP or PDF file.");
+        button.disabled=true;
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-100);
+        const path=studentId+"/"+type+"/"+crypto.randomUUID()+"-"+safeName;
+        try {
+          const uploaded=await sb.storage.from("student-documents").upload(path,file,{contentType:file.type,upsert:false});
+          if(uploaded.error) throw uploaded.error;
+          const saved=await sb.from("student_documents").insert({
+            student_id:studentId,document_type:type,object_path:path,file_name:file.name,
+            mime_type:file.type,file_size:file.size,uploaded_by:currentUser.id
+          });
+          if(saved.error){await sb.storage.from("student-documents").remove([path]);throw saved.error;}
+          await loadSchoolData(currentUser.role);
+          showPage("students");
+          alert("Student document uploaded successfully.");
+        } catch(err){alert("Could not upload document: "+(err.message||err));button.disabled=false;}
       });
 
-      attach("parentLoginForm", async d => createAccount(toBody(d, "parent")));
+      document.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+        button.disabled=true;
+        try {
+          const doc=studentDocuments.find(x=>x.id===button.dataset.downloadStudentDoc);
+          if(!doc) throw new Error("Document record not found. Refresh and try again.");
+          const signed=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
+          if(signed.error) throw signed.error;
+          window.open(signed.data.signedUrl,"_blank","noopener");
+        } catch(err){alert("Could not download document: "+(err.message||err));}
+        finally{button.disabled=false;}
+      }));
+
+      const filter=document.getElementById("studentDocumentStudent");
+      const list=document.getElementById("studentDocumentList");
+      const drawDocs=()=>{
+        if(!filter||!list)return;
+        const selected=filter.value;
+        const docs=studentDocuments.filter(d=>d.student_id===selected);
+        const labels={passport_photo:"Student passport photograph",kcpe_kjsea_certificate:"KJSEA / KCPE result slip or certificate",birth_certificate:"Student birth certificate",parent_id:"Parent / guardian ID"};
+        list.innerHTML=docs.length?docs.map(d=>'<div class="student-document-row"><div><b>'+esc(labels[d.document_type]||d.document_type)+'</b><small>'+esc(d.file_name)+' · '+(d.file_size/1024).toFixed(0)+' KB</small></div><button type="button" data-download-student-doc="'+esc(d.id)+'">Download</button></div>').join(""):'<p>No documents uploaded for this student yet.</p>';
+        list.querySelectorAll("[data-download-student-doc]").forEach(button=>button.addEventListener("click",async()=>{
+          const doc=studentDocuments.find(x=>x.id===button.dataset.downloadStudentDoc);
+          if(!doc)return;
+          const signed=await sb.storage.from("student-documents").createSignedUrl(doc.object_path,60,{download:doc.file_name});
+          if(signed.error)return alert("Could not download: "+signed.error.message);
+          window.open(signed.data.signedUrl,"_blank","noopener");
+        }));
+      };
+      filter?.addEventListener("change",drawDocs);drawDocs();
     });
 
-    return `
-      <form id="addStudentForm" class="entry-form">
-        <h3>Register student</h3>
-        <input name="admission" placeholder="Admission number" required>
-        <input name="name" placeholder="Full name" required>
-        <select name="class_id" required>${opts(classRows, "id", "name", "Select class")}</select>
-        <button type="submit">Add student</button>
-      </form>
-
-      <form id="studentLoginForm" class="entry-form">
-        <h3>Create student login</h3>
-        <p>The student's admission number will be the login ID and temporary password. The student must create a new password at first login.</p>
-        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select student")}</select>
-        <button type="submit">Create student login</button>
-      </form>
-
-      <form id="parentLoginForm" class="entry-form">
-        <h3>Create parent login</h3>
-        <select name="student_id" required>${opts(studentOptions(), "id", "name", "Select linked child")}</select>
-        <input name="name" placeholder="Parent or guardian full name" required>
-        <input name="email" type="email" placeholder="Parent email address" required>
-        <input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required>
-        <button type="submit">Create parent login</button>
-      </form>`;
+    const adminForms=isAdmin()?(
+      '<form id="addStudentForm" class="entry-form"><h3>Register student</h3><input name="admission" placeholder="Admission number" required><input name="name" placeholder="Full name" required><select name="class_id" required>'+opts(classRows,"id","name","Select class")+'</select><button type="submit">Add student</button></form>'+
+      '<form id="studentLoginForm" class="entry-form"><h3>Create student login</h3><p>The student uses their admission number as the login ID and temporary password, then changes it at first login.</p><select name="student_id" required>'+opts(studentList,"id","name","Select student")+'</select><button type="submit">Create student login</button></form>'+
+      '<form id="parentLoginForm" class="entry-form"><h3>Create parent login</h3><select name="student_id" required>'+opts(studentList,"id","name","Select linked child")+'</select><input name="name" placeholder="Parent or guardian full name" required><input name="email" type="email" placeholder="Parent email address" required><input name="password" type="password" minlength="8" placeholder="Temporary password (8+ characters)" required><button type="submit">Create parent login</button></form>'
+    ):"";
+    const selected=students[0]?.id||"";
+    return adminForms+
+      '<section class="student-documents-admin"><h3>Student documents</h3><p>Upload and download each student’s passport photo, KJSEA/KCPE result slip or certificate, birth certificate and parent/guardian ID.</p>'+
+      '<label>Choose student<select id="studentDocumentStudent">'+opts(studentList,"id","name","Select student")+'</select></label>'+
+      '<div id="studentDocumentList" class="student-document-list"></div>'+
+      '<form id="studentDocumentForm" class="entry-form"><h3>Upload a student document</h3>'+
+      '<input type="hidden" name="student_id" value="'+esc(selected)+'">'+
+      '<label>Document type<select name="document_type" required><option value="passport_photo">Student passport photograph</option><option value="kcpe_kjsea_certificate">KJSEA / KCPE result slip or certificate</option><option value="birth_certificate">Student birth certificate</option><option value="parent_id">Parent / guardian ID</option></select></label>'+
+      '<input name="document_file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required><small>JPG, PNG, WEBP or PDF · Maximum 10 MB.</small><button type="submit">Upload document</button></form></section>';
   });
 
   wrap("renderTeachersPage", async () => {
