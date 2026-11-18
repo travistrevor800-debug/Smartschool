@@ -104,7 +104,7 @@ async function loadSchoolData(role) {
   results = (res.data || []).map(r => ({
     studentId: r.student_id, classId: r.students?.class_id || null,
     admission: r.students?.admission_no || "", student: r.students?.full_name || "Student",
-    className: r.students?.classes?.name || "Class", grade: r.students?.classes?.grade || null, stream: r.students?.classes?.stream || "",
+    className: r.students?.classes?.name || "Class", classGrade: r.students?.classes?.grade || null, stream: r.students?.classes?.stream || "",
     subject: r.subjects?.name || "Subject", term: r.term || "", year: r.academic_year || "",
     assessmentType: r.assessment_type || "exam", teacherComment: r.teacher_comment || "", marks: Number(r.score), grade: letterGrade(Number(r.score))
   }));
@@ -1237,7 +1237,7 @@ function renderResultsPage() {
     const term=value("reportTerm"), year=value("reportYear"), student=students.find(s=>s.id===studentId);
     const rows=results.filter(r=>r.studentId===studentId && r.term===term && String(r.year)===year);
     const classRows=results.filter(r=>r.classId===student?.classId && r.term===term && String(r.year)===year);
-    const gradeRows=results.filter(r=>r.grade===student?.grade && r.term===term && String(r.year)===year);
+    const gradeRows=results.filter(r=>r.classGrade===student?.grade && r.term===term && String(r.year)===year);
     const average=rows.length?rows.reduce((n,r)=>n+r.marks,0)/rows.length:0;
     const grouped=new Map();
     classRows.forEach(r=>{const list=grouped.get(r.studentId)||[];list.push(r.marks);grouped.set(r.studentId,list);});
