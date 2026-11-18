@@ -76,7 +76,7 @@ async function loadSchoolData(role) {
     sb.from("announcements").select("id, title, body, audience, created_by, created_at").order("created_at", { ascending: false }),
     sb.from("fee_balances").select("student_id, total_due, total_paid"),
     sb.from("fee_payments").select("id, amount, method, reference, receipt_no, invoice_id, term, academic_year, paid_at, students(admission_no, full_name)").order("paid_at", { ascending: false }),
-    sb.from("fee_invoices").select("id, student_id, term, academic_year, amount_due, due_date, invoice_no, created_at").order("created_at", { ascending: false }),
+    sb.from("fee_invoices").select("id, student_id, term, academic_year, amount_due, due_date, invoice_no, created_at, students(admission_no, full_name)").order("created_at", { ascending: false }),
     sb.from("fee_schedules").select("id, class_id, term, academic_year, title, amount, due_date, is_active, classes(name)").order("created_at", { ascending: false }),
     sb.from("student_attendance").select("status, attendance_date, students(admission_no, full_name)").order("attendance_date", { ascending: false }),
     staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
@@ -1592,9 +1592,10 @@ function renderFeesPage(searchTerm = "") {
     const paid = feePayments.filter(p => p.invoiceId === inv.id).reduce((n,p)=>n+p.amount,0);
     const balance = Math.max(0, Number(inv.amount)-paid);
     const overdue = balance>0 && inv.due_date && inv.due_date < new Date().toISOString().slice(0,10);
-    return "<p><strong>"+escapeHTML(inv.invoice_no)+"</strong> · "+escapeHTML(inv.term)+" "+escapeHTML(inv.academic_year)+" · "+money(inv.amount)+" · Balance "+money(balance)+" · Due "+escapeHTML(inv.due_date||"-")+" · "+(overdue?"OVERDUE":balance===0?"PAID":"PENDING")+"</p>";
+    return "<p><strong>"+escapeHTML(inv.invoice_no)+"</strong> · "+escapeHTML(inv.term)+" "+escapeHTML(inv.academic_year)+" · "+money(inv.amount)+" · Balance "+money(balance)+" · Due "+escapeHTML(inv.due_date||"-")+" · "+(overdue?"OVERDUE":balance===0?"PAID":"PENDING")+(currentUser.role==="admin"&&balance>0?" <button data-reminder=\""+escapeHTML(inv.id)+"\">Share reminder</button>":"")+"</p>";
   }).join("") : "<p>No invoices issued yet.</p>");
   contentPage.appendChild(invoicePanel);
+  invoicePanel.querySelectorAll("[data-reminder]").forEach(button => button.addEventListener("click", () => shareFeeReminder(button.dataset.reminder)));
 
   const paymentPanel = document.createElement("div");
   paymentPanel.className = "panel";
@@ -1604,6 +1605,15 @@ function renderFeesPage(searchTerm = "") {
 }
 
 
+
+function shareFeeReminder(invoiceId) {
+  const invoice=feeInvoices.find(x=>x.id===invoiceId); if(!invoice)return;
+  const student=invoice.students||{};
+  const paid=feePayments.filter(p=>p.invoiceId===invoice.id).reduce((n,p)=>n+p.amount,0);
+  const balance=Math.max(0,invoice.amount-paid);
+  const message=["Kirimunge Senior School fee reminder","Student: "+(student.full_name||"Student"),"Admission: "+(student.admission_no||""),"Invoice: "+invoice.invoice_no,"Term: "+invoice.term+" "+invoice.academic_year,"Outstanding: "+money(balance),"Due date: "+(invoice.due_date||"Please contact the school office"),"Please contact the school office if you have already paid. Thank you."].join("\n");
+  window.open("https://wa.me/?text="+encodeURIComponent(message),"_blank");
+}
 
 function printFeeReceipt(paymentId) {
   const p = feePayments.find(x => x.id === paymentId);
