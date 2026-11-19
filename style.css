@@ -455,3 +455,11 @@ tbody tr:hover { background: #f8f9fc; }
 .smart-assignment-submission small{color:var(--muted,#64748b)}
 .smart-assignment-submission button{flex-shrink:0}
 @media(max-width:520px){.smart-assignment-top{flex-direction:column}.smart-assignment-submission{flex-wrap:wrap}}
+
+.lesson-session-overlay{position:fixed;inset:0;z-index:10000;background:rgba(8,18,36,.96);display:grid;place-items:center;padding:18px}
+.lesson-session-panel{width:min(620px,100%);max-height:90dvh;overflow:auto;background:#fff;color:#172b4d;border-radius:18px;padding:26px;box-shadow:0 18px 60px rgba(0,0,0,.35)}
+.lesson-session-panel h2{margin:14px 0;color:#172b4d}
+.lesson-session-panel p{line-height:1.55;color:#53647b}
+.lesson-session-clock{font-size:clamp(42px,12vw,72px);font-weight:800;letter-spacing:.06em;text-align:center;padding:22px;margin:18px 0;background:#eef3f9;border-radius:14px;color:#172b4d;font-variant-numeric:tabular-nums}
+.lesson-session-video{display:inline-block;padding:11px 15px;background:#172b4d;color:#fff;border-radius:8px;font-weight:700;text-decoration:none}
+.lesson-session-note{font-size:.82rem;border-top:1px solid #e3e8ef;padding-top:14px;margin-top:18px}
