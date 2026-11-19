@@ -463,3 +463,22 @@ tbody tr:hover { background: #f8f9fc; }
 .lesson-session-clock{font-size:clamp(42px,12vw,72px);font-weight:800;letter-spacing:.06em;text-align:center;padding:22px;margin:18px 0;background:#eef3f9;border-radius:14px;color:#172b4d;font-variant-numeric:tabular-nums}
 .lesson-session-video{display:inline-block;padding:11px 15px;background:#172b4d;color:#fff;border-radius:8px;font-weight:700;text-decoration:none}
 .lesson-session-note{font-size:.82rem;border-top:1px solid #e3e8ef;padding-top:14px;margin-top:18px}
+
+/* Secure examination workspace */
+.secure-exam-overlay{position:fixed;inset:0;z-index:20000;background:#07152c;display:grid;place-items:center;padding:12px;color:#172b4d}
+.secure-exam-panel{width:min(980px,100%);height:min(94dvh,900px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.4)}
+.secure-exam-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px;background:#14284b;color:#fff}
+.secure-exam-header span{font-size:.7rem;letter-spacing:.12em;font-weight:800;color:#f1c75b}
+.secure-exam-header h2{margin:5px 0;font-size:1.2rem;color:#fff}.secure-exam-header small{color:#d7e0ed}
+.secure-exam-clock{font-size:clamp(24px,6vw,38px);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.secure-exam-rules{margin:0;padding:12px 18px;background:#fff5dc;color:#755116;font-size:.85rem;line-height:1.45}
+.secure-exam-questions{overflow:auto;flex:1;padding:12px 18px;user-select:none;-webkit-user-select:none}
+.secure-exam-question{padding:14px 0;border-bottom:1px solid #e3e8ef}.secure-exam-question>div:first-child{display:flex;justify-content:space-between;gap:10px;color:#38577f;font-size:.85rem}
+.secure-exam-question p{font-weight:700;line-height:1.5;color:#172b4d}.secure-exam-options{display:grid;gap:8px}
+.secure-exam-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #dbe3ee;border-radius:9px;background:#f8fafc}
+.secure-exam-option input{width:18px;height:18px;flex-shrink:0}
+.secure-exam-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid #e3e8ef;background:#fff}
+.secure-exam-footer span{font-size:.78rem;color:#53647b}.exam-create-form{margin-bottom:18px}
+.exam-create-form>label{display:grid;gap:7px;margin:12px 0}.exam-create-form textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.exam-publish-choice{display:flex!important;align-items:center;gap:8px}
+@media(max-width:600px){.secure-exam-overlay{padding:0}.secure-exam-panel{height:100dvh;border-radius:0}.secure-exam-header{padding:12px}.secure-exam-rules{font-size:.78rem}.secure-exam-footer{align-items:stretch;flex-direction:column}.secure-exam-footer button{width:100%}}

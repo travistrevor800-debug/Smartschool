@@ -225,7 +225,7 @@ const rolePermissions = {
 
 };
 
-["student", "teacher", "admin"].forEach(role => rolePermissions[role].push("lessons", "contests"));
+["student", "teacher", "admin"].forEach(role => rolePermissions[role].push("lessons", "contests", "examinations"));
 
 /* =========================================================
    PAGE INFORMATION
@@ -265,6 +265,7 @@ const pageInfo = {
 
   lessons: { title: "Lessons", description: "Class lessons and learning materials." },
   contests: { title: "Competitions & Challenges", description: "Academic competitions and student challenges." },
+  examinations: { title: "Examinations", description: "Secure, timed school examinations and assessments." },
 
   assignments: {
     title: "Assignments",
@@ -735,6 +736,10 @@ navigationItems.forEach(item => {
 
 
 function showPage(page) {
+  if (activeExamAttempt && page !== "examinations") {
+    void submitActiveExam("page_exit").finally(() => showPage(page));
+    return;
+  }
 
   /*
      HARD PERMISSION CHECK
@@ -827,6 +832,7 @@ function showPage(page) {
       break;
     case "lessons": renderLessonsPage(); break;
     case "contests": renderContestsPage(); break;
+    case "examinations": renderExaminationsPage(); break;
 
     case "assignments":
       renderAssignmentsPage();
@@ -1317,6 +1323,153 @@ function renderLessonsPage() {
 function renderContestsPage() {
   if(!hasPermission("contests")) return showAccessDenied();
   contentPage.innerHTML=`<div class="page-header"><div><h2>Academic Competitions & Challenges</h2><p>Subject challenges and school-wide academic competitions.</p></div></div><div class="learning-grid">${competitions.map(c=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(c.subject)}</span><h3>🏆 ${escapeHTML(c.title)}</h3><p><b>Class:</b> ${escapeHTML(c.className)}</p><p><b>Starts:</b> ${c.startsAt?escapeHTML(new Date(c.startsAt).toLocaleString()):"To be announced"}</p><p><b>Duration:</b> ${c.duration} minutes</p><span class="status-pill ${c.published?"status-live":"status-draft"}">${c.published?"Published":"Coming soon"}</span></article>`).join("")||'<div class="panel"><h3>No competitions yet</h3><p>New challenges will appear here when published.</p></div>'}</div>`;
+}
+
+
+/* =========================================================
+   SECURE EXAMINATIONS
+   ========================================================= */
+let activeExamAttempt=null, activeExamAnswers={}, examTimerInterval=null, examSaveTimer=null, examSubmitting=false;
+let examVisibilityHandler=null, examPagehideHandler=null, examBeforeUnloadHandler=null;
+function examTimeLabel(v){return v?new Date(v).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short"}):"Not scheduled";}
+function stopExamGuards(){
+ if(examTimerInterval)clearInterval(examTimerInterval);
+ if(examSaveTimer)clearTimeout(examSaveTimer);
+ examTimerInterval=examSaveTimer=null;
+ if(examVisibilityHandler)document.removeEventListener("visibilitychange",examVisibilityHandler);
+ if(examPagehideHandler)window.removeEventListener("pagehide",examPagehideHandler);
+ if(examBeforeUnloadHandler)window.removeEventListener("beforeunload",examBeforeUnloadHandler);
+ examVisibilityHandler=examPagehideHandler=examBeforeUnloadHandler=null;
+}
+function closeExamWorkspace(message){
+ stopExamGuards(); activeExamAttempt=null; examSubmitting=false;
+ document.getElementById("secureExamOverlay")?.remove();
+ window.SmartschoolAssistant?.show();
+ if(message)alert(message);
+}
+async function submitActiveExam(reason){
+ if(!activeExamAttempt||examSubmitting)return;
+ examSubmitting=true;
+ const status=document.getElementById("secureExamStatus");
+ if(status)status.textContent="Submitting your answers securely…";
+ const {data,error}=await sb.rpc("submit_attempt",{p_attempt:activeExamAttempt.id,p_answers:activeExamAnswers,p_reason:reason||"manual"});
+ if(error){
+  examSubmitting=false;
+  if(status)status.textContent="Submission is not yet confirmed. Keep this page open while Smartschool retries.";
+  console.error("Exam submission failed:",error); return;
+ }
+ closeExamWorkspace(reason==="manual"?"Your examination has been submitted.":reason==="time_expired"?"Time is up. Your examination was submitted automatically.":"Leaving the examination tab or page submitted your answers automatically.");
+ if(document.querySelector(".nav-item.active")?.dataset.page==="examinations")void renderExaminationsPage();
+}
+async function saveExamAnswers(){
+ if(!activeExamAttempt||examSubmitting)return;
+ const {error}=await sb.rpc("save_attempt_answers",{p_attempt:activeExamAttempt.id,p_answers:activeExamAnswers});
+ const status=document.getElementById("secureExamStatus");
+ if(status)status.textContent=error?"Connection issue: your latest answer has not yet been confirmed saved.":"All answers saved securely.";
+ if(error)console.error("Exam autosave failed:",error);
+}
+function queueExamSave(){
+ if(examSaveTimer)clearTimeout(examSaveTimer);
+ const status=document.getElementById("secureExamStatus");if(status)status.textContent="Saving answer…";
+ examSaveTimer=setTimeout(()=>void saveExamAnswers(),350);
+}
+async function openSecureExam(assessment,existingAttempt){
+ if(currentUser?.role!=="student")return;
+ let attempt=existingAttempt;
+ if(!attempt){const result=await sb.rpc("start_attempt",{p_assessment:assessment.id});if(result.error){alert("This examination cannot be started: "+result.error.message);return;}attempt=result.data;}
+ if(attempt.submitted_at){alert("This examination has already been submitted.");return;}
+ activeExamAttempt={id:attempt.id,deadlineAt:attempt.deadline_at};activeExamAnswers={...(attempt.answers||{})};
+ const loaded=await sb.rpc("get_attempt_questions",{p_attempt:attempt.id});
+ if(loaded.error){activeExamAttempt=null;alert("Could not load examination questions: "+loaded.error.message);return;}
+ if(!loaded.data?.length){await submitActiveExam("time_expired");return;}
+ window.SmartschoolAssistant?.hide();
+ const overlay=document.createElement("div");overlay.id="secureExamOverlay";overlay.className="secure-exam-overlay";
+ overlay.innerHTML='<section class="secure-exam-panel" role="dialog" aria-modal="true"><header class="secure-exam-header"><div><span>OFFICIAL ASSESSMENT</span><h2>'+escapeHTML(assessment.title)+'</h2><small>'+escapeHTML(assessment.subjects?.name||"School examination")+' · '+escapeHTML(assessment.classes?.name||"")+'</small></div><div class="secure-exam-clock" id="secureExamClock">--:--</div></header><p class="secure-exam-rules">Your answers save automatically. Leaving this tab, switching apps, or navigating away submits the examination immediately. The school assistant is disabled during this attempt.</p><div id="secureExamQuestions" class="secure-exam-questions"></div><footer class="secure-exam-footer"><span id="secureExamStatus" aria-live="polite">Preparing secure examination…</span><button type="button" id="secureExamSubmit" class="primary-button">Submit examination</button></footer></section>';
+ document.body.appendChild(overlay);
+ const questionHost=overlay.querySelector("#secureExamQuestions");
+ questionHost.innerHTML=loaded.data.map((q,index)=>{
+  const options=Array.isArray(q.options)?q.options:[];
+  const optionHtml=options.map((o,i)=>{
+   const value=typeof o==="string"?o:String(o.value??o.label??o.text??(i+1));
+   const label=typeof o==="string"?o:String(o.label??o.text??o.value??(i+1));
+   return '<label class="secure-exam-option"><input type="radio" name="exam-'+q.id+'" value="'+escapeHTML(value)+'" '+(activeExamAnswers[q.id]===value?"checked":"")+'><span>'+escapeHTML(label)+'</span></label>';
+  }).join("");
+  return '<article class="secure-exam-question"><div><b>Question '+(index+1)+'</b><span>'+escapeHTML(q.marks)+' mark(s)</span></div><p>'+escapeHTML(q.prompt)+'</p><div class="secure-exam-options">'+(optionHtml||'<label>Answer<input type="text" data-exam-answer="'+q.id+'" value="'+escapeHTML(activeExamAnswers[q.id]||"")+'"></label>')+'</div></article>';
+ }).join("");
+ questionHost.querySelectorAll('input[type="radio"]').forEach(input=>input.addEventListener("change",()=>{
+  const id=input.name.slice(5);activeExamAnswers[id]=input.value;queueExamSave();
+ }));
+ questionHost.querySelectorAll("[data-exam-answer]").forEach(input=>input.addEventListener("input",()=>{
+  activeExamAnswers[input.dataset.examAnswer]=input.value;queueExamSave();
+ }));
+ overlay.querySelector("#secureExamSubmit").addEventListener("click",()=>{
+  if(confirm("Submit your examination now? You will not be able to change your answers afterwards."))void submitActiveExam("manual");
+ });
+ const tick=()=>{
+  if(!activeExamAttempt)return;
+  const remaining=Math.max(0,Math.ceil((new Date(activeExamAttempt.deadlineAt).getTime()-Date.now())/1000));
+  const clock=document.getElementById("secureExamClock");
+  if(clock)clock.textContent=Math.floor(remaining/60).toString().padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");
+  if(remaining<=0)void submitActiveExam("time_expired");
+ };
+ examVisibilityHandler=()=>{if(document.visibilityState==="hidden"&&activeExamAttempt)void submitActiveExam("tab_hidden");};
+ examPagehideHandler=()=>{if(activeExamAttempt&&!examSubmitting)void submitActiveExam("page_exit");};
+ examBeforeUnloadHandler=event=>{if(!activeExamAttempt)return;void submitActiveExam("page_exit");event.preventDefault();event.returnValue="";};
+ document.addEventListener("visibilitychange",examVisibilityHandler);
+ window.addEventListener("pagehide",examPagehideHandler);
+ window.addEventListener("beforeunload",examBeforeUnloadHandler);
+ tick();examTimerInterval=setInterval(tick,1000);
+ try{await document.documentElement.requestFullscreen?.();}catch(_){}
+}
+async function renderExaminationsPage(){
+ if(!hasPermission("examinations"))return showAccessDenied();
+ const isStaff=["admin","teacher","class_teacher"].includes(currentUser.role);
+ contentPage.innerHTML='<div class="page-header"><div><h2>Examinations & Tests</h2><p>Timed assessments with automatic saving and submission.</p></div></div><div id="examWorkspace"><div class="panel">Loading examinations…</div></div>';
+ const host=document.getElementById("examWorkspace");
+ try{
+  const result=await sb.from("assessments").select("id,title,kind,starts_at,duration_minutes,is_published,class_id,subject_id,classes(name),subjects(name)").in("kind",["exam","test","cat"]).order("starts_at",{ascending:true});
+  if(result.error)throw result.error;
+  const rows=result.data||[];let attempts=[];
+  if(!isStaff&&rows.length){
+   const ar=await sb.from("attempts").select("id,assessment_id,started_at,deadline_at,submitted_at,auto_submitted,answers,score").in("assessment_id",rows.map(r=>r.id));
+   if(ar.error)throw ar.error;attempts=ar.data||[];
+  }
+  const cards=rows.filter(r=>isStaff||r.is_published).map(row=>{
+   const attempt=attempts.find(a=>a.assessment_id===row.id),now=Date.now(),start=new Date(row.starts_at).getTime(),end=start+Number(row.duration_minutes)*60000;
+   const state=attempt?.submitted_at?"Submitted":attempt?"In progress":now<start?"Scheduled":now>end?"Closed":"Available";
+   return '<article class="learning-card"><span class="learning-tag">'+escapeHTML(row.subjects?.name||"Subject")+'</span><h3>'+escapeHTML(row.title)+'</h3><p><b>Class:</b> '+escapeHTML(row.classes?.name||"Class")+'</p><p><b>Starts:</b> '+escapeHTML(examTimeLabel(row.starts_at))+'</p><p><b>Duration:</b> '+escapeHTML(row.duration_minutes)+' minutes</p><span class="status-pill '+(["Available","In progress"].includes(state)?"status-live":"status-draft")+'">'+state+'</span>'+
+    (!isStaff&&row.is_published&&!attempt&&state==="Available"?'<button type="button" class="primary-button" data-begin-exam="'+row.id+'">Start examination</button>':"")+
+    (!isStaff&&attempt&&!attempt.submitted_at?'<button type="button" class="primary-button" data-resume-exam="'+row.id+'">Resume examination</button>':"")+
+    (attempt?.submitted_at?'<p><b>Score:</b> '+escapeHTML(attempt.score??"Pending")+(attempt.auto_submitted?" · Automatically submitted":"")+'</p>':"")+'</article>';
+  }).join("");
+  let staffForm="";
+  if(isStaff){
+   const [classRows,subjectRows]=await Promise.all([sb.from("classes").select("id,name").order("name"),sb.from("subjects").select("id,name").order("name")]);
+   if(classRows.error||subjectRows.error)throw classRows.error||subjectRows.error;
+   staffForm='<form id="createSecureExam" class="panel entry-form exam-create-form"><h3>➕ Create an examination</h3><input name="title" maxlength="140" placeholder="Examination title" required><div class="smart-assignment-fields"><select name="class_id" required><option value="">Choose class</option>'+classRows.data.map(c=>'<option value="'+c.id+'">'+escapeHTML(c.name)+'</option>').join("")+'</select><select name="subject_id" required><option value="">Choose subject</option>'+subjectRows.data.map(s=>'<option value="'+s.id+'">'+escapeHTML(s.name)+'</option>').join("")+'</select><label>Start date and time<input type="datetime-local" name="starts_at" required></label><label>Duration in minutes<input type="number" name="duration_minutes" min="1" max="600" value="60" required></label></div><label>Questions (JSON array)<textarea name="questions" rows="8" required placeholder=\'[{"prompt":"What is 2 + 2?","options":["3","4","5"],"correct_answer":"4","marks":1}]\'></textarea></label><label class="exam-publish-choice"><input type="checkbox" name="is_published" checked> Publish when saved</label><button type="submit" class="primary-button">Create examination</button></form>';
+  }
+  host.innerHTML=staffForm+'<div class="learning-grid">'+(cards||'<div class="panel"><h3>No examinations available</h3><p>Published examinations will appear here.</p></div>')+'</div>';
+  host.querySelectorAll("[data-begin-exam]").forEach(b=>b.addEventListener("click",()=>void openSecureExam(rows.find(r=>r.id===b.dataset.beginExam),null)));
+  host.querySelectorAll("[data-resume-exam]").forEach(b=>b.addEventListener("click",()=>void openSecureExam(rows.find(r=>r.id===b.dataset.resumeExam),attempts.find(a=>a.assessment_id===b.dataset.resumeExam))));
+  const form=host.querySelector("#createSecureExam");
+  if(form)form.addEventListener("submit",async event=>{
+   event.preventDefault();const button=form.querySelector("button[type=submit]");button.disabled=true;
+   try{
+    const v=Object.fromEntries(new FormData(form).entries()),questions=JSON.parse(v.questions);
+    if(!Array.isArray(questions)||!questions.length)throw new Error("Add at least one question.");
+    questions.forEach((q,i)=>{
+     if(!q.prompt||!Array.isArray(q.options)||!q.options.length||!q.correct_answer)throw new Error("Question "+(i+1)+" needs a prompt, options and correct_answer.");
+     const opts=q.options.map(o=>typeof o==="string"?o:String(o.value??o.label??o.text??""));
+     if(!opts.includes(String(q.correct_answer)))throw new Error("Question "+(i+1)+" correct_answer must exactly match an option.");
+    });
+    const created=await sb.from("assessments").insert({class_id:v.class_id,subject_id:v.subject_id,kind:"exam",title:v.title.trim(),starts_at:new Date(v.starts_at).toISOString(),duration_minutes:Number(v.duration_minutes),is_published:form.elements.is_published.checked,created_by:currentUser.id}).select("id").single();
+    if(created.error)throw created.error;
+    const inserted=await sb.from("questions").insert(questions.map((q,i)=>({assessment_id:created.data.id,position:i+1,prompt:q.prompt,options:q.options,correct_answer:String(q.correct_answer),marks:Number(q.marks||1)})));
+    if(inserted.error){await sb.from("assessments").delete().eq("id",created.data.id);throw inserted.error;}
+    alert("Examination created successfully.");await renderExaminationsPage();
+   }catch(error){alert(error.message||String(error));button.disabled=false;}
+  });
+ }catch(error){host.innerHTML='<div class="panel"><h3>Examinations could not load</h3><p>'+escapeHTML(error.message||String(error))+'</p></div>';}
 }
 
 /* =========================================================
