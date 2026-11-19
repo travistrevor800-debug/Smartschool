@@ -99,18 +99,33 @@ async function callGemini(prompt: string, attachment?: { mimeType: string; data:
     generationConfig: { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: "LOW" } },
   };
   if (useWebGrounding) requestBody.tools = [{ google_search: {} }];
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+  let response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify(requestBody),
   });
-  const data = await response.json();
+  let data = await response.json();
+  let groundingUnavailable = false;
+  if (!response.ok && useWebGrounding && [400, 403, 429].includes(response.status)) {
+    // Keep the tutor usable on a free API key, but clearly disclose that this answer was not live-verified.
+    console.warn("Gemini Search grounding unavailable; retrying without live sources:", response.status, data?.error?.status);
+    groundingUnavailable = true;
+    const fallbackBody = { ...requestBody };
+    delete (fallbackBody as any).tools;
+    response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify(fallbackBody),
+    });
+    data = await response.json();
+  }
   if (!response.ok) {
     console.error("Gemini request failed:", response.status, data?.error?.status || data?.error?.message);
     throw new Error(data?.error?.message || "The assistant could not reach Gemini. Check the API key and model access.");
   }
   const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("").trim();
   if (!text) throw new Error("The assistant returned an empty response. Please try again.");
+  if (groundingUnavailable) return text + "\n\n⚠️ Curriculum verification notice: Live Google Search was unavailable for this request. Treat this as general study guidance, not confirmation of the current KICD/KNEC syllabus. Verify the exact topic, grade and assessment rules against the latest official documents before teaching, assessing or making school decisions.";
   if (!useWebGrounding) return text;
 
   const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
