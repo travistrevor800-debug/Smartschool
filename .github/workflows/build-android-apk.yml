@@ -7,6 +7,10 @@ on:
         description: "Release version (for example 1.0.0)"
         required: true
         default: "1.0.0"
+      host:
+        description: "Exact live website hostname only, without https://"
+        required: true
+        default: "kirimungesenior.vercel.app"
 
 permissions:
   contents: write
@@ -17,6 +21,14 @@ jobs:
     steps:
       - name: Check out Smartschool
         uses: actions/checkout@v4
+
+      - name: Verify website hostname
+        env:
+          SMARTSCHOOL_HOST: ${{ inputs.host }}
+        run: |
+          case "$SMARTSCHOOL_HOST" in
+            ""|http*|*/*) echo "::error::Enter only the hostname, for example kirimungesenior.vercel.app"; exit 1 ;;
+          esac
 
       - name: Verify release signing secrets
         env:
@@ -53,6 +65,7 @@ jobs:
 
       - name: Build signed release APK
         env:
+          SMARTSCHOOL_HOST: ${{ inputs.host }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
