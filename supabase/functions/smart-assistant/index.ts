@@ -94,40 +94,56 @@ async function callGemini(prompt: string, attachment?: { mimeType: string; data:
   const parts: Record<string, unknown>[] = [];
   if (attachment) parts.push({ inlineData: { mimeType: attachment.mimeType, data: attachment.data } });
   parts.push({ text: prompt });
-  const requestBody: Record<string, unknown> = {
+  const baseBody: Record<string, unknown> = {
     contents: [{ role: "user", parts }],
     generationConfig: { maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: "LOW" } },
   };
-  if (useWebGrounding) requestBody.tools = [{ google_search: {} }];
-  let response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(requestBody),
-  });
-  let data = await response.json();
+  const transientStatuses = [429, 500, 502, 503, 504];
+  async function request(model: string, grounded: boolean) {
+    const body = { ...baseBody };
+    if (grounded) body.tools = [{ google_search: {} }];
+    let response: Response | null = null;
+    let data: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify(body),
+      });
+      data = await response.json().catch(() => ({}));
+      if (response.ok || !transientStatuses.includes(response.status) || attempt === 1) break;
+      console.warn("Gemini temporary capacity/rate response; retrying once:", model, response.status);
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+    return { response: response!, data };
+  }
   let groundingUnavailable = false;
-  if (!response.ok && useWebGrounding && [400, 403, 429].includes(response.status)) {
-    // Keep the tutor usable on a free API key, but clearly disclose that this answer was not live-verified.
-    console.warn("Gemini Search grounding unavailable; retrying without live sources:", response.status, data?.error?.status);
+  let result = await request("gemini-3.8-flash", useWebGrounding);
+  if (!result.response.ok && useWebGrounding && [400, 403, 429, 500, 502, 503, 504].includes(result.response.status)) {
+    console.warn("Gemini Search grounding unavailable; retrying without live sources:", result.response.status);
     groundingUnavailable = true;
-    const fallbackBody = { ...requestBody };
-    delete (fallbackBody as any).tools;
-    response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(fallbackBody),
-    });
-    data = await response.json();
+    result = await request("gemini-3.8-flash", false);
   }
-  if (!response.ok) {
-    console.error("Gemini request failed:", response.status, data?.error?.status || data?.error?.message);
-    throw new Error(data?.error?.message || "The assistant could not reach Gemini. Check the API key and model access.");
+  if (!result.response.ok && transientStatuses.includes(result.response.status)) {
+    console.warn("Primary Gemini model unavailable; trying secondary stable model:", result.response.status);
+    result = await request("gemini-3.6-flash", false);
+    if (useWebGrounding) groundingUnavailable = true;
   }
+  if (!result.response.ok) {
+    const status = result.response.status;
+    console.error("Gemini request failed after fallback:", status, result.data?.error?.status || result.data?.error?.message);
+    if (transientStatuses.includes(status)) {
+      throw new Error("The assistant's AI service is temporarily busy. Please wait a moment and send your message again.");
+    }
+    throw new Error(result.data?.error?.message || "The assistant could not reach Gemini. Check the API key and model access.");
+  }
+  const data = result.data;
   const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("").trim();
   if (!text) throw new Error("The assistant returned an empty response. Please try again.");
-  if (groundingUnavailable) return text + "\n\n⚠️ Curriculum verification notice: Live Google Search was unavailable for this request. Treat this as general study guidance, not confirmation of the current KICD/KNEC syllabus. Verify the exact topic, grade and assessment rules against the latest official documents before teaching, assessing or making school decisions.";
+  if (groundingUnavailable) {
+    return text + "\n\n⚠️ Curriculum verification notice: Live Google Search was unavailable for this request. Treat this as general study guidance, not confirmation of the current KICD/KNEC syllabus. Verify the exact topic, grade and assessment rules against the latest official documents before teaching, assessing or making school decisions.";
+  }
   if (!useWebGrounding) return text;
-
   const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
   const sources = chunks
     .map((chunk: any) => chunk.web)
