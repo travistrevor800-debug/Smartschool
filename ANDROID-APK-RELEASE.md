@@ -42,7 +42,7 @@ On Android Termux:
 ## Important
 
 - The Android package ID is `ke.co.kirimunge.smartschool`. Do not change it after distribution.
-- The website origin is currently configured as `https://kirimungesenior.vercel.app`. If the school's live domain changes, update the Android launch URL, intent filter, asset statement and web app manifest before releasing.
+- The workflow takes the website hostname as an input and applies it to the Android launch URL, Android link verification and website association. Always enter the exact production hostname used by the school.
 - The website and Supabase remain the source of truth. Authentication and Row Level Security continue to protect student and parent information.
 - The APK requires internet access for sign-in, school records, documents and the School Assistant.
 - The first build cannot be published until the four GitHub Actions secrets above are configured.
