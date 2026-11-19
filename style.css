@@ -430,3 +430,28 @@ tbody tr:hover { background: #f8f9fc; }
   text-decoration:underline;
   text-align:center;
 }
+
+
+/* Assignment and homework centre */
+.smart-assignment-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}
+.smart-assignment-card{min-width:0;display:flex;flex-direction:column;gap:10px}
+.smart-assignment-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.smart-assignment-top h3{margin:0 0 5px}
+.smart-assignment-top p,.smart-assignment-card p{margin:0;color:var(--muted,#64748b)}
+.smart-assignment-status{white-space:nowrap;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700;background:#e8eef8;color:#29466e}
+.smart-assignment-status.is-overdue{background:#fff0ed;color:#b42318}
+.smart-assignment-status.is-submitted{background:#e8f7ee;color:#187443}
+.smart-assignment-instructions{white-space:pre-wrap;line-height:1.5;color:var(--text,#243247)!important}
+.smart-assignment-create{margin-bottom:18px}
+.smart-assignment-create textarea,.smart-assignment-submit textarea{width:100%;padding:12px;border:1px solid var(--border,#d9e0ea);border-radius:10px;font:inherit;resize:vertical}
+.smart-assignment-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
+.smart-assignment-fields label{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.smart-assignment-fields input,.smart-assignment-fields select{min-width:0;padding:10px;border:1px solid var(--border,#d9e0ea);border-radius:9px;font:inherit}
+.smart-assignment-submit{display:grid;gap:9px;margin-top:8px}
+.smart-assignment-submit button,.smart-assignment-create button{justify-self:start}
+.smart-assignment-submissions{border-top:1px solid var(--border,#e2e8f0);padding-top:12px;margin-top:6px}
+.smart-assignment-submission{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border,#edf0f5);font-size:13px}
+.smart-assignment-submission span:first-child{display:grid;gap:3px;min-width:0}
+.smart-assignment-submission small{color:var(--muted,#64748b)}
+.smart-assignment-submission button{flex-shrink:0}
+@media(max-width:520px){.smart-assignment-top{flex-direction:column}.smart-assignment-submission{flex-wrap:wrap}}

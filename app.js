@@ -1264,59 +1264,132 @@ function renderContestsPage() {
    ASSIGNMENTS
    ========================================================= */
 
-function renderAssignmentsPage() {
+async function renderAssignmentsPage() {
+  if (!hasPermission("assignments")) { showAccessDenied(); return; }
 
-  if (!hasPermission("assignments")) {
-
-    showAccessDenied();
-
-    return;
-
-  }
-
-
+  const role = currentUser.role;
+  const isStaff = role === "admin" || role === "teacher" || role === "class_teacher";
   contentPage.innerHTML = `
+    <div class="page-header"><div><h2>Assignments & Homework</h2><p>Publish work, submit answers and track progress.</p></div></div>
+    <div id="assignmentWorkspace"><div class="panel">Loading your assignments…</div></div>`;
 
-    <div class="page-header">
+  const workspace = document.getElementById("assignmentWorkspace");
+  try {
+    const [{ data: rows, error }, { data: classRows }, { data: subjectRows }] = await Promise.all([
+      sb.from("assignments").select("id,title,instructions,due_at,class_id,subject_id,created_by,classes(name),subjects(name)").order("due_at",{ascending:true}),
+      isStaff ? sb.from("classes").select("id,name").order("name") : Promise.resolve({data:[]}),
+      isStaff ? sb.from("subjects").select("id,name").order("name") : Promise.resolve({data:[]})
+    ]);
+    if (error) throw error;
 
-      <div>
-        <h2>Assignments</h2>
-        <p>School assignments and due dates.</p>
-      </div>
+    let myStudentId = null;
+    if (role === "student") {
+      const {data: student, error: studentError} = await sb.from("students").select("id").eq("profile_id",currentUser.id).maybeSingle();
+      if (studentError) throw studentError;
+      myStudentId = student?.id || null;
+    }
 
-    </div>
+    const ids = (rows || []).map(x=>x.id);
+    let submissions = [];
+    if (ids.length) {
+      const {data, error: subError} = await sb.from("assignment_submissions")
+        .select("id,assignment_id,student_id,content,file_url,score,submitted_at,students(full_name,admission_no)")
+        .in("assignment_id",ids);
+      if (subError) throw subError;
+      submissions = data || [];
+    }
 
-    <div class="dashboard-grid">
+    const escape = value => escapeHTML(String(value ?? ""));
+    const localDate = value => value ? new Date(value).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short"}) : "No deadline";
+    const cards = (rows || []).map(item => {
+      const mine = submissions.find(s=>s.assignment_id===item.id && s.student_id===myStudentId);
+      const related = submissions.filter(s=>s.assignment_id===item.id);
+      const due = item.due_at ? new Date(item.due_at) : null;
+      const overdue = due && due < new Date() && !mine?.submitted_at;
+      return `
+        <article class="panel smart-assignment-card">
+          <div class="smart-assignment-top"><div><h3>📘 ${escape(item.title)}</h3><p>${escape(item.subjects?.name || "Subject")} · ${escape(item.classes?.name || "Class")}</p></div>
+          <span class="smart-assignment-status ${overdue?"is-overdue":mine?.submitted_at?"is-submitted":"is-pending"}">${overdue?"Overdue":mine?.submitted_at?"Submitted":"Assigned"}</span></div>
+          <p class="smart-assignment-instructions">${escape(item.instructions || "No extra instructions provided.")}</p>
+          <p><strong>Due:</strong> ${escape(localDate(item.due_at))}</p>
+          ${role==="student" ? `
+            <div class="smart-assignment-submit">
+              <label for="answer-${item.id}">Your answer</label>
+              <textarea id="answer-${item.id}" rows="3" placeholder="Write your answer here…">${escape(mine?.content || "")}</textarea>
+              <button type="button" data-submit-assignment="${item.id}" ${!myStudentId?"disabled":""}>${mine?.submitted_at?"Update submission":"Submit assignment"}</button>
+              ${mine?.submitted_at?`<small>Submitted ${escape(localDate(mine.submitted_at))} · ${mine.score===null?"Awaiting marking":"Score: "+escape(mine.score)}</small>`:""}
+            </div>` : ""}
+          ${isStaff ? `
+            <div class="smart-assignment-submissions"><strong>Submissions (${related.length})</strong>
+              ${related.length ? related.map(s=>`
+                <div class="smart-assignment-submission">
+                  <span><b>${escape(s.students?.full_name || "Student")}</b><small>${escape(s.students?.admission_no || "")} · ${escape(localDate(s.submitted_at))}</small></span>
+                  <span>${s.score===null?"Not marked":"Score: "+escape(s.score)}</span>
+                  <button type="button" class="secondary-button" data-view-submission="${s.id}">Review</button>
+                </div>`).join("") : "<p>No submissions yet.</p>"}
+            </div>` : ""}
+        </article>`;
+    }).join("");
 
-      ${assignments.map(assignment => `
-
-        <div class="panel">
-
-          <h3>
-            📚 ${escapeHTML(assignment.title)}
-          </h3>
-
-          <p>
-            <strong>Subject:</strong>
-            ${escapeHTML(assignment.subject)}
-          </p>
-
-          <p>
-            <strong>Class:</strong>
-            ${escapeHTML(assignment.className)}
-          </p>
-
-          <p>
-            <strong>Due:</strong>
-            ${escapeHTML(assignment.dueDate)}
-          </p>
-
+    workspace.innerHTML = `
+      ${isStaff ? `
+      <form id="createAssignmentForm" class="panel entry-form smart-assignment-create">
+        <h3>➕ Publish a new assignment</h3>
+        <input name="title" maxlength="140" placeholder="Assignment title" required>
+        <textarea name="instructions" rows="3" maxlength="6000" placeholder="Instructions, questions and resources"></textarea>
+        <div class="smart-assignment-fields">
+          <select name="class_id" required><option value="">Choose class</option>${(classRows||[]).map(c=>`<option value="${c.id}">${escape(c.name)}</option>`).join("")}</select>
+          <select name="subject_id" required><option value="">Choose subject</option>${(subjectRows||[]).map(s=>`<option value="${s.id}">${escape(s.name)}</option>`).join("")}</select>
+          <label>Due date and time<input type="datetime-local" name="due_at" required></label>
         </div>
+        <button type="submit">Publish assignment</button>
+      </form>` : ""}
+      <div class="smart-assignment-list">${cards || '<div class="panel">No assignments have been published for your account yet.</div>'}</div>`;
 
-      `).join("")}
+    const createForm = document.getElementById("createAssignmentForm");
+    createForm?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button=createForm.querySelector('button[type="submit"]'); button.disabled=true;
+      const data=Object.fromEntries(new FormData(createForm).entries());
+      const {error:insertError}=await sb.from("assignments").insert({
+        title:data.title.trim(), instructions:data.instructions.trim(), class_id:data.class_id,
+        subject_id:data.subject_id, due_at:new Date(data.due_at).toISOString(), created_by:currentUser.id
+      });
+      if(insertError){alert("Could not publish assignment: "+insertError.message);button.disabled=false;return;}
+      alert("Assignment published for the selected class."); await renderAssignmentsPage();
+    });
 
-    </div>
-  `;
+    workspace.querySelectorAll("[data-submit-assignment]").forEach(button=>button.addEventListener("click",async()=>{
+      const assignmentId=button.dataset.submitAssignment;
+      const content=document.getElementById("answer-"+assignmentId)?.value.trim() || "";
+      if(!content){alert("Write your answer before submitting.");return;}
+      if(!myStudentId){alert("Your student profile is not linked. Ask the school administrator to check your account.");return;}
+      button.disabled=true;
+      const existing=submissions.find(s=>s.assignment_id===assignmentId && s.student_id===myStudentId);
+      const payload={assignment_id:assignmentId,student_id:myStudentId,content,submitted_at:new Date().toISOString()};
+      const result=existing
+        ? await sb.from("assignment_submissions").update(payload).eq("id",existing.id)
+        : await sb.from("assignment_submissions").insert(payload);
+      if(result.error){alert("Submission failed: "+result.error.message);button.disabled=false;return;}
+      alert("Your assignment has been submitted."); await renderAssignmentsPage();
+    }));
+
+    workspace.querySelectorAll("[data-view-submission]").forEach(button=>button.addEventListener("click",async()=>{
+      const submission=submissions.find(s=>s.id===button.dataset.viewSubmission); if(!submission)return;
+      const answer=prompt("Student answer:\n\n"+(submission.content||"No written answer."),submission.content||"");
+      if(answer===null)return;
+      const raw=prompt("Enter the mark/score for this submission (leave blank to save without changing the mark):",submission.score??"");
+      if(raw===null)return;
+      const update={content:answer};
+      if(raw.trim()!==""){const score=Number(raw);if(!Number.isFinite(score)||score<0){alert("Enter a valid non-negative mark.");return;}update.score=score;}
+      const {error:updateError}=await sb.from("assignment_submissions").update(update).eq("id",submission.id);
+      if(updateError){alert("Could not save review: "+updateError.message);return;}
+      alert("Submission review saved."); await renderAssignmentsPage();
+    }));
+  } catch (error) {
+    console.error("Assignment centre:",error);
+    workspace.innerHTML='<div class="panel"><h3>Assignments could not be loaded</h3><p>Please refresh and try again. If the problem continues, contact the school administrator.</p></div>';
+  }
 }
 
 
