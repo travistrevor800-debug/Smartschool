@@ -6,6 +6,7 @@ def releaseStoreFile = file("smartschool-release.jks")
 def releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
 def releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
 def releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def appHost = System.getenv("SMARTSCHOOL_HOST") ?: "kirimungesenior.vercel.app"
 
 android {
     namespace "ke.co.kirimunge.smartschool"
@@ -17,6 +18,9 @@ android {
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
+        manifestPlaceholders = [appHost: appHost]
+        resValue "string", "launch_url", "https://${appHost}/?source=android-app"
+        resValue "string", "asset_statements", "[{\\\"include\\\":\\\"https://${appHost}\\\"}]"
     }
 
     signingConfigs {
