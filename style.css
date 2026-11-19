@@ -345,3 +345,58 @@ tbody tr:hover { background: #f8f9fc; }
   .report-table{font-size:9pt}
   .report-table th,.report-table td{padding:5px}
 }
+
+
+/* ---------- Floating role-aware school assistant ---------- */
+#schoolAssistantRoot { position: relative; z-index: 1000; }
+.school-assistant-bubble {
+  position: fixed; right: 20px; bottom: 20px; z-index: 1002;
+  width: 58px; height: 58px; border: 0; border-radius: 50%;
+  background: var(--navy, #172b4d); color: #fff; font-size: 28px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.25);
+}
+.school-assistant-bubble:focus-visible { outline: 3px solid var(--gold, #e3b341); outline-offset: 3px; }
+.school-assistant-panel {
+  position: fixed; right: 20px; bottom: 90px; z-index: 1001;
+  width: min(430px, calc(100vw - 24px)); height: min(640px, calc(100dvh - 120px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface, #fff); color: var(--ink, #18222f);
+  border: 1px solid var(--line, #d9e0e8); border-radius: 16px;
+  box-shadow: 0 16px 50px rgba(0,0,0,.24);
+}
+.school-assistant-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: var(--navy, #172b4d); color: #fff;
+}
+.school-assistant-head strong, .school-assistant-head small { display:block; }
+.school-assistant-head small { opacity:.8; font-size:.78rem; margin-top:2px; }
+.school-assistant-head button { border:0; background:transparent; color:#fff; font-size:28px; line-height:1; padding:0 4px; }
+.school-assistant-messages { flex:1; min-height:0; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:#f5f7fa; }
+.assistant-message { max-width:92%; padding:10px 12px; border-radius:12px; white-space:pre-wrap; overflow-wrap:anywhere; font-size:.9rem; }
+.assistant-reply { align-self:flex-start; background:#fff; border:1px solid #e0e5eb; }
+.assistant-user { align-self:flex-end; background:#e8eef8; color:#1b3155; }
+.school-assistant-form { padding:12px; border-top:1px solid var(--line,#d9e0e8); background:var(--surface,#fff); }
+.school-assistant-form textarea { display:block; width:100%; resize:vertical; min-height:56px; border:1px solid var(--line,#d9e0e8); border-radius:9px; padding:10px; font:inherit; }
+.school-assistant-attach { display:inline-flex; align-items:center; gap:5px; margin:0 0 8px; color:var(--navy-soft,#385b91); cursor:pointer; font-size:.85rem; }
+.school-assistant-attach input { display:none; }
+.school-assistant-actions { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; }
+.school-assistant-actions span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted,#5d6b7c); font-size:.75rem; }
+.school-assistant-actions button, .assistant-draft-actions button { border:0; border-radius:8px; padding:9px 14px; background:var(--navy,#172b4d); color:#fff; font-weight:700; }
+.school-assistant-actions button:disabled, .assistant-draft-actions button:disabled { opacity:.55; }
+.school-assistant-note { display:block; margin-top:8px; color:var(--muted,#5d6b7c); font-size:.7rem; }
+.school-assistant-draft { max-height:42%; overflow:auto; padding:12px; border-top:1px solid var(--line,#d9e0e8); background:#fff; }
+.assistant-draft-heading small { display:block; color:var(--muted,#5d6b7c); margin:4px 0 8px; }
+.assistant-draft-table-wrap { overflow:auto; max-height:230px; }
+.assistant-draft-table { border-collapse:collapse; width:100%; font-size:.76rem; }
+.assistant-draft-table th, .assistant-draft-table td { padding:5px; border-bottom:1px solid #e5e9ef; text-align:left; vertical-align:top; }
+.assistant-draft-table input { min-width:105px; padding:6px; font-size:.76rem; }
+.assistant-confidence { display:inline-block; padding:3px 6px; border-radius:10px; background:#edf1f6; font-weight:700; }
+.assistant-draft-table td small { display:block; color:var(--muted,#5d6b7c); }
+.assistant-remove-row { border:0; background:transparent; color:#a22; font-size:20px; }
+.assistant-warning { margin:9px 0; color:#8a4b0a; font-size:.78rem; }
+.assistant-draft-actions { display:flex; justify-content:flex-end; gap:8px; }
+.assistant-draft-actions .assistant-secondary { background:#e9edf2; color:#263548; }
+@media (max-width:600px) {
+  .school-assistant-bubble { right:14px; bottom:14px; width:54px; height:54px; }
+  .school-assistant-panel { right:8px; bottom:76px; width:calc(100vw - 16px); height:min(72dvh,620px); }
+}
