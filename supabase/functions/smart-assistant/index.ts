@@ -183,7 +183,7 @@ Deno.serve(async (req: Request) => {
       return reply({ students: Array.isArray(parsed.students) ? parsed.students : [], document_notes: parsed.document_notes || "" });
     }
 
-    const educationQuery = /\\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\\b/i.test(message);
+    const educationQuery = /\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\b/i.test(message);
     const currentKenyaDate = nairobiDate();
     const educationGuidance = educationQuery ? `
 EDUCATION CURRICULUM RULES — MUST FOLLOW:
