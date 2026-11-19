@@ -80,7 +80,7 @@ async function loadSchoolData(role) {
     sb.from("fee_schedules").select("id, class_id, term, academic_year, title, amount, due_date, is_active, classes(name)").order("created_at", { ascending: false }),
     sb.from("student_attendance").select("status, attendance_date, class_id, students(id, admission_no, full_name, class_id, classes(name))").order("attendance_date", { ascending: false }),
     staff ? sb.from("profiles").select("id, full_name, role").in("role", ["teacher", "class_teacher"]) : Promise.resolve({ data: [] }),
-    sb.from("lessons").select("id, title, video_url, scheduled_at, classes(name), subjects(name)").order("scheduled_at"),
+    sb.from("lessons").select("id, title, video_url, scheduled_at, duration_minutes, classes(name), subjects(name)").order("scheduled_at"),
     sb.from("revision_materials").select("id, title, file_url, content, classes(name), subjects(name)").order("created_at", { ascending: false }),
     sb.from("assessments").select("id, title, kind, starts_at, duration_minutes, is_published, classes(name), subjects(name)").eq("kind", "contest").order("starts_at"),
     sb.from("student_documents").select("id, student_id, document_type, object_path, file_name, mime_type, file_size, created_at").order("created_at", { ascending: false }),
@@ -114,7 +114,7 @@ async function loadSchoolData(role) {
   }));
   studentDocuments = docs.data || [];
   reportCardComments = comments.data || [];
-  lessons = (les.data || []).map(r => ({id:r.id,title:r.title,videoUrl:r.video_url||"",scheduledAt:r.scheduled_at||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
+  lessons = (les.data || []).map(r => ({id:r.id,title:r.title,videoUrl:r.video_url||"",scheduledAt:r.scheduled_at||"",durationMinutes:r.duration_minutes||30,className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
   revisionMaterials = (materials.data || []).map(r => ({id:r.id,title:r.title,fileUrl:r.file_url||"",content:r.content||"",className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
   competitions = (contests.data || []).map(r => ({id:r.id,title:r.title,startsAt:r.starts_at,duration:r.duration_minutes,published:!!r.is_published,className:r.classes?.name||"Class",subject:r.subjects?.name||"Subject"}));
 
@@ -1249,11 +1249,70 @@ function renderResultsPage() {
   draw();
 }
 
+let activeLessonSession = null;
+let lessonCountdownInterval = null;
+let lessonBeforeUnloadHandler = null;
+
+async function finishLessonSession() {
+  if (!activeLessonSession) return;
+  const { data, error } = await sb.rpc("complete_lesson_session", { p_session: activeLessonSession.id });
+  if (error) {
+    if (String(error.message||"").includes("duration has not expired")) return;
+    console.error("Lesson completion:", error);
+    return;
+  }
+  activeLessonSession = null;
+  clearInterval(lessonCountdownInterval);
+  lessonCountdownInterval = null;
+  if (lessonBeforeUnloadHandler) window.removeEventListener("beforeunload", lessonBeforeUnloadHandler);
+  lessonBeforeUnloadHandler = null;
+  const overlay = document.getElementById("lessonSessionOverlay");
+  if (overlay) overlay.remove();
+  alert("Lesson completed. Your completion has been recorded.");
+}
+
+async function openTimedLesson(lesson) {
+  if (currentUser.role !== "student") return;
+  const { data: session, error } = await sb.rpc("start_lesson_session", { p_lesson: lesson.id });
+  if (error) { alert("Could not start lesson: " + error.message); return; }
+  activeLessonSession = { id: session.id, joinedAt: session.joined_at, durationMinutes: lesson.durationMinutes };
+  const overlay = document.createElement("div");
+  overlay.id = "lessonSessionOverlay";
+  overlay.className = "lesson-session-overlay";
+  overlay.innerHTML = `
+    <section class="lesson-session-panel" role="dialog" aria-modal="true" aria-labelledby="lessonSessionTitle">
+      <span class="learning-tag">Timed learning session</span>
+      <h2 id="lessonSessionTitle">${escapeHTML(lesson.title)}</h2>
+      <p>This lesson remains active until the teacher-set duration expires. Leaving or refreshing will not reset the timer.</p>
+      <div class="lesson-session-clock" id="lessonSessionClock" aria-live="polite">Loading timer…</div>
+      ${lesson.videoUrl ? `<a class="lesson-session-video" href="${escapeHTML(lesson.videoUrl)}" target="_blank" rel="noopener noreferrer">Open lesson video in a new tab</a>` : "<p>Follow the lesson material provided by your teacher.</p>"}
+      <p class="lesson-session-note">Keep this lesson open. Completion is confirmed by the school server when the full duration has elapsed.</p>
+    </section>`;
+  document.body.appendChild(overlay);
+  lessonBeforeUnloadHandler = event => { event.preventDefault(); event.returnValue = ""; };
+  window.addEventListener("beforeunload", lessonBeforeUnloadHandler);
+  const tick = async () => {
+    const endsAt = new Date(session.joined_at).getTime() + lesson.durationMinutes * 60000;
+    const remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+    const clock = document.getElementById("lessonSessionClock");
+    if (clock) clock.textContent = remaining > 0
+      ? Math.floor(remaining/60).toString().padStart(2,"0") + ":" + (remaining%60).toString().padStart(2,"0")
+      : "00:00";
+    if (remaining <= 0) await finishLessonSession();
+  };
+  await tick();
+  lessonCountdownInterval = setInterval(tick, 1000);
+}
+
 function renderLessonsPage() {
   if(!hasPermission("lessons")) return showAccessDenied();
   contentPage.innerHTML=`<div class="page-header"><div><h2>Lessons & Learning Centre</h2><p>Class lessons, notes and revision resources.</p></div></div>
-  <div class="panel"><h3>My class lessons</h3><div class="learning-grid">${lessons.map(l=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(l.subject)}</span><h3>${escapeHTML(l.title)}</h3><p><b>Class:</b> ${escapeHTML(l.className)}</p><p><b>Schedule:</b> ${l.scheduledAt?escapeHTML(new Date(l.scheduledAt).toLocaleString()):"Not scheduled"}</p>${l.videoUrl?`<a href="${escapeHTML(l.videoUrl)}" target="_blank" rel="noopener noreferrer">Open lesson video</a>`:"No video attached"}</article>`).join("")||"<p>No lessons available yet.</p>"}</div></div>
+  <div class="panel"><h3>My class lessons</h3><div class="learning-grid">${lessons.map(l=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(l.subject)}</span><h3>${escapeHTML(l.title)}</h3><p><b>Class:</b> ${escapeHTML(l.className)}</p><p><b>Schedule:</b> ${l.scheduledAt?escapeHTML(new Date(l.scheduledAt).toLocaleString()):"Not scheduled"}</p><p><b>Required duration:</b> ${escapeHTML(l.durationMinutes)} minutes</p>${currentUser.role==="student"?`<button type="button" class="primary-button" data-start-lesson="${escapeHTML(l.id)}">Start lesson</button>`:l.videoUrl?`<a href="${escapeHTML(l.videoUrl)}" target="_blank" rel="noopener noreferrer">Open lesson video</a>`:"No video attached"}</article>`).join("")||"<p>No lessons available yet.</p>"}</div></div>
   <div class="panel"><h3>Notes & revision materials</h3><div class="learning-grid">${revisionMaterials.map(m=>`<article class="learning-card"><span class="learning-tag">${escapeHTML(m.subject)}</span><h3>${escapeHTML(m.title)}</h3><p><b>Class:</b> ${escapeHTML(m.className)}</p>${m.content?`<p>${escapeHTML(m.content)}</p>`:""}${m.fileUrl?`<a href="${escapeHTML(m.fileUrl)}" target="_blank" rel="noopener noreferrer">Open / download resource</a>`:""}</article>`).join("")||"<p>No revision materials available yet.</p>"}</div></div>`;
+  contentPage.querySelectorAll("[data-start-lesson]").forEach(button=>button.addEventListener("click",()=>{
+    const lesson=lessons.find(item=>item.id===button.dataset.startLesson);
+    if(lesson) openTimedLesson(lesson);
+  }));
 }
 function renderContestsPage() {
   if(!hasPermission("contests")) return showAccessDenied();
