@@ -20,7 +20,7 @@ android {
         versionName "1.0.0"
         manifestPlaceholders = [appHost: appHost]
         resValue "string", "launch_url", "https://${appHost}/?source=android-app"
-        resValue "string", "asset_statements", "[{\\\"include\\\":\\\"https://${appHost}\\\"}]"
+        resValue "string", "asset_statements", "[{\"include\":\"https://${appHost}\"}]"
     }
 
     signingConfigs {
