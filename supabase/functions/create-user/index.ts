@@ -24,11 +24,12 @@ function parentEmail(admissionNo: string) {
   const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
   return `parent.${hex}@login.smartschool.invalid`;
 }
-function generateTemporaryPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join("");
+function parentTemporaryPassword(childFullName: string, admissionNo: string) {
+  const firstName = String(childFullName || "").trim().split(/\s+/)[0];
+  if (!firstName || !admissionNo.trim()) {
+    throw new Error("The child's first name and admission number are required to create the parent password.");
+  }
+  return firstName + admissionNo.trim();
 }
 
 Deno.serve(async (req) => {
@@ -88,7 +89,10 @@ Deno.serve(async (req) => {
         fullName = student.full_name;
       } else {
         email = parentEmail(admissionNo);
-        password = generateTemporaryPassword();
+        password = parentTemporaryPassword(student.full_name, admissionNo);
+        if (password.length < 6) {
+          return json({ error: "The child's first name plus admission number must create a password of at least 6 characters. Contact the administrator." }, 400);
+        }
         initialPassword = password;
         if (!fullName) return json({ error: "Parent or guardian full name is required" }, 400);
       }
