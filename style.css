@@ -420,3 +420,13 @@ tbody tr:hover { background: #f8f9fc; }
 .smartschool-install-banner button { border:0; border-radius:10px; padding:10px 13px; background:#14284b; color:#fff; font-weight:700; }
 .smartschool-install-banner button:last-child { padding:5px 8px; background:transparent; color:#64748b; font-size:20px; }
 @media (max-width:600px) { .smartschool-install-banner { left:12px; bottom:82px; width:calc(100vw - 24px); } }
+
+.smartschool-apk-link {
+  display:block;
+  margin-top:4px;
+  color:#14284b;
+  font-size:.75rem;
+  font-weight:700;
+  text-decoration:underline;
+  text-align:center;
+}

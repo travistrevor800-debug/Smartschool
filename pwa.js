@@ -18,6 +18,7 @@
       <span>Install the app for quick access from your home screen.</span>
     </div>
     <button type="button" id="smartschoolInstallButton">Install</button>
+    <a class="smartschool-apk-link" href="/download.html">Get Android APK</a>
     <button type="button" id="smartschoolInstallDismiss" aria-label="Dismiss install message">×</button>
   `;
   document.body.appendChild(banner);

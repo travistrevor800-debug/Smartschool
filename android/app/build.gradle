@@ -1,0 +1,54 @@
+plugins {
+    id "com.android.application"
+}
+
+def releaseStoreFile = file("smartschool-release.jks")
+def releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def appHost = System.getenv("SMARTSCHOOL_HOST") ?: "kirimungesenior.vercel.app"
+
+android {
+    namespace "ke.co.kirimunge.smartschool"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "ke.co.kirimunge.smartschool"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+        manifestPlaceholders = [appHost: appHost]
+        resValue "string", "launch_url", "https://${appHost}/?source=android-app"
+        resValue "string", "asset_statements", "[{\"include\":\"https://${appHost}\"}]"
+    }
+
+    signingConfigs {
+        release {
+            if (releaseStoreFile.exists() && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile releaseStoreFile
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseStoreFile.exists() && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.4"
+}
