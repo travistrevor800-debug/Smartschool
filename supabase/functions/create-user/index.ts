@@ -25,7 +25,7 @@ function parentEmail(admissionNo: string) {
   return `parent.${hex}@login.smartschool.invalid`;
 }
 function parentTemporaryPassword(childFullName: string, admissionNo: string) {
-  const firstName = String(childFullName || "").trim().split(/\\s+/)[0];
+  const firstName = String(childFullName || "").trim().split(/\s+/)[0];
   if (!firstName || !admissionNo.trim()) {
     throw new Error("The child's first name and admission number are required to create the parent password.");
   }
