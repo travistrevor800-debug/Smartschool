@@ -565,6 +565,7 @@ async function completeAuthenticatedLogin(user, loginIdentity, chosenRole) {
   applyRoleAccess();
   updateDashboard();
   showPage("dashboard");
+  window.SmartschoolAssistant?.show();
 }
 
 function showFirstLoginPasswordChange(loginIdentity, chosenRole) {
@@ -691,6 +692,7 @@ loginForm.addEventListener("submit", async function(event) {
 
 logoutButton.addEventListener("click", async function() {
   await sb.auth.signOut();
+  window.SmartschoolAssistant?.hide();
   currentUser = null;
   appPage.classList.add("hidden");
   loginPage.classList.remove("hidden");
