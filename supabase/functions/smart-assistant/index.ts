@@ -212,7 +212,7 @@ Deno.serve(async (req: Request) => {
       if (typeof attachment.data !== "string" || attachment.data.length > 11500000) return reply({ error: "The document is too large. Use a file under 8 MB." }, 413);
     }
 
-    const educationQuery = /\\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\\b/i.test(message);
+    const educationQuery = /\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\b/i.test(message);
     const schoolDataQuery = /\\b(student|admission|class|classes|fee|fees|balance|payment|receipt|result|results|marks|score|attendance|teacher|staff|document|report card|parent|child|children|school record|dashboard)\\b/i.test(message);
     const context = task === "extract_students"
       ? await schoolContext(client, profile)
@@ -226,7 +226,7 @@ Deno.serve(async (req: Request) => {
       return reply({ students: Array.isArray(parsed.students) ? parsed.students : [], document_notes: parsed.document_notes || "" });
     }
 
-    const educationQuery = /\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\b/i.test(message);
+
     const currentKenyaDate = nairobiDate();
     const educationGuidance = educationQuery ? `
 EDUCATION CURRICULUM RULES — MUST FOLLOW:
