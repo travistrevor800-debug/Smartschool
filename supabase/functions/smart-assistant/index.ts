@@ -213,7 +213,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const educationQuery = /\b(education|educational|teach|teacher|learning|learner|lesson|scheme of work|lesson plan|syllabus|curriculum|cbc|cbe|kcse|knec|kicd|grade|form [1-4]|revision|homework|assignment|assessment|exam|examination|subject|strand|sub-strand|competenc|learning outcome|marking scheme|past paper)\b/i.test(message);
-    const schoolDataQuery = /\\b(student|admission|class|classes|fee|fees|balance|payment|receipt|result|results|marks|score|attendance|teacher|staff|document|report card|parent|child|children|school record|dashboard)\\b/i.test(message);
+    const schoolDataQuery = /\b(student|admission|class|classes|fee|fees|balance|payment|receipt|result|results|marks|score|attendance|staff|document|report card|parent|child|children|school record|dashboard)\b/i.test(message);
     const context = task === "extract_students"
       ? await schoolContext(client, profile)
       : (educationQuery || !schoolDataQuery ? { role: profile.role } : await schoolContext(client, profile));
