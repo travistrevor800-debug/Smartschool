@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Smartschool</string>
+    <string name="launch_url">https://kirimungesenior.vercel.app/?source=android-app</string>
+    <string name="asset_statements">[{&quot;include&quot;:&quot;https://kirimungesenior.vercel.app&quot;}]</string>
+</resources>
