@@ -1,0 +1,101 @@
+name: Build and publish Smartschool Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (for example 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Smartschool
+        uses: actions/checkout@v4
+
+      - name: Verify release signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "::error::Missing ANDROID_KEYSTORE_BASE64 repository secret" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "::error::Missing ANDROID_KEYSTORE_PASSWORD repository secret" && exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "::error::Missing ANDROID_KEY_ALIAS repository secret" && exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "::error::Missing ANDROID_KEY_PASSWORD repository secret" && exit 1)
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Restore private Android signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/smartschool-release.jks
+          test -s android/app/smartschool-release.jks
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          gradle --no-daemon -p android :app:assembleRelease
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk release/Smartschool.apk
+
+      - name: Publish Android Digital Asset Links
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          FINGERPRINT="$(keytool -list -v -keystore android/app/smartschool-release.jks -alias "$ANDROID_KEY_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" | awk '/SHA256:/ {print $2; exit}')"
+          test -n "$FINGERPRINT"
+          mkdir -p .well-known
+          cat > .well-known/assetlinks.json <<EOF
+          [
+            {
+              "relation": ["delegate_permission/common.handle_all_urls"],
+              "target": {
+                "namespace": "android_app",
+                "package_name": "ke.co.kirimunge.smartschool",
+                "sha256_cert_fingerprints": ["$FINGERPRINT"]
+              }
+            }
+          ]
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .well-known/assetlinks.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(android): publish Smartschool app verification"
+            git push origin HEAD:main
+          fi
+
+      - name: Publish downloadable APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: smartschool-v${{ inputs.version }}
+          name: Smartschool Android v${{ inputs.version }}
+          target_commitish: main
+          files: release/Smartschool.apk
+          overwrite_files: true
+          make_latest: true
+          generate_release_notes: true
