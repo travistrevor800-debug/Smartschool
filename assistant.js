@@ -52,10 +52,14 @@
     root.classList.add("assistant-visible");
     root.querySelector("#schoolAssistantRole").textContent = roleLabel(currentUser.role) + " access";
   }
-  function hide() {
+  function closePanel() {
     root.classList.remove("assistant-visible");
     panel.classList.add("hidden");
     bubble.setAttribute("aria-expanded", "false");
+  }
+  function hide() {
+    closePanel();
+    bubble.classList.add("hidden");
   }
   function toggle() {
     if (!currentUser) return;
@@ -146,7 +150,7 @@
   }
 
   bubble.addEventListener("click", toggle);
-  close.addEventListener("click", hide);
+  close.addEventListener("click", closePanel);
   fileInput.addEventListener("change", () => {
     selectedFile = fileInput.files?.[0] || null;
     fileName.textContent = selectedFile ? selectedFile.name : "No file attached";
